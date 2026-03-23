@@ -1157,7 +1157,20 @@ footer {
   gap: 8px;
   flex-wrap: wrap;
 }
-.db-top-left, .db-top-right { display: flex; align-items: center; gap: 8px; }
+.db-top-left, .db-top-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.db-contract-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.db-target-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
 .db-main {
   flex: 1;
   display: flex;

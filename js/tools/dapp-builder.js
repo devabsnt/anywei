@@ -85,8 +85,18 @@ export function render(container) {
     <div class="db-layout">
       <div class="db-top-bar">
         <div class="db-top-left">
-          <div class="input-group" style="width:260px">
-            <input type="text" id="db-contract" class="mono-input" placeholder="Contract address or paste ABI" spellcheck="false" style="font-size:11px">
+          <div class="db-contract-section">
+            <select id="db-contract-source" class="mono-input" style="font-size:11px;width:130px">
+              <option value="address">Address</option>
+              <option value="ide">From IDE</option>
+              <option value="abi">Paste ABI</option>
+            </select>
+            <input type="text" id="db-contract" class="mono-input" placeholder="0x contract address" spellcheck="false" style="font-size:11px;width:240px">
+            <select id="db-ide-contract" class="mono-input hidden" style="font-size:11px;width:240px"></select>
+            <div id="db-contract-status" class="status-line" style="font-size:10px"></div>
+          </div>
+          <div class="db-target-section">
+            <input type="text" id="db-target-addr" class="mono-input" placeholder="Target address (for export)" spellcheck="false" style="font-size:11px;width:240px" title="The address used in the exported frontend. Set this if using CREATE2 or deploying later.">
           </div>
           <div class="mode-tabs" style="margin:0">
             <button class="mode-btn active" data-layout="grid">Grid</button>
@@ -129,13 +139,44 @@ export function render(container) {
   const canvas = document.getElementById('db-canvas')
   const propsPanel = document.getElementById('db-props')
   const contractInput = document.getElementById('db-contract')
-  let renderQueued = false
+  const contractSource = document.getElementById('db-contract-source')
+  const ideContractSelect = document.getElementById('db-ide-contract')
+  const contractStatus = document.getElementById('db-contract-status')
 
-  // ── Contract loading ──
+  // ── Contract source switching ──
+  contractSource.addEventListener('change', () => {
+    const mode = contractSource.value
+    contractInput.classList.toggle('hidden', mode === 'ide')
+    ideContractSelect.classList.toggle('hidden', mode !== 'ide')
+    contractInput.placeholder = mode === 'address' ? '0x contract address (deployed or CREATE2 predicted)' : 'Paste ABI JSON array'
+    if (mode === 'ide') populateIdeContracts()
+  })
+
+  const targetAddrInput = document.getElementById('db-target-addr')
+
   contractInput.addEventListener('change', loadContract)
   contractInput.addEventListener('paste', () => setTimeout(loadContract, 50))
+  ideContractSelect.addEventListener('change', loadIdeContract)
+  targetAddrInput.addEventListener('input', () => {
+    state.contract.address = targetAddrInput.value.trim()
+  })
 
-  // Check for compiled artifact from IDE
+  // Populate IDE contracts dropdown
+  function populateIdeContracts() {
+    try {
+      const compiled = sessionStorage.getItem('anywei_compiled')
+      if (!compiled) { ideContractSelect.innerHTML = '<option value="">No compiled contracts</option>'; return }
+      const arts = JSON.parse(compiled)
+      const names = Object.keys(arts)
+      if (names.length === 0) { ideContractSelect.innerHTML = '<option value="">No compiled contracts</option>'; return }
+      ideContractSelect.innerHTML = '<option value="">Select a contract...</option>' +
+        names.map(n => `<option value="${esc(n)}">${esc(n)} (${arts[n].abi?.filter(e => e.type === 'function').length || 0} fn)</option>`).join('')
+    } catch {
+      ideContractSelect.innerHTML = '<option value="">Error loading</option>'
+    }
+  }
+
+  // Auto-load first IDE contract on init
   try {
     const compiled = sessionStorage.getItem('anywei_compiled')
     if (compiled) {
@@ -143,29 +184,64 @@ export function render(container) {
       const first = Object.values(arts)[0]
       if (first?.abi) {
         state.contract.abi = first.abi
-        contractInput.value = first.contractName || 'From IDE'
-        contractInput.title = `${first.abi.filter(e => e.type === 'function').length} functions loaded`
+        contractSource.value = 'ide'
+        contractInput.classList.add('hidden')
+        ideContractSelect.classList.remove('hidden')
+        populateIdeContracts()
+        ideContractSelect.value = Object.keys(arts)[0]
+        contractStatus.innerHTML = `<span class="success">${first.abi.filter(e => e.type === 'function').length} functions loaded from IDE</span>`
       }
     }
   } catch {}
 
+  function loadIdeContract() {
+    const name = ideContractSelect.value
+    if (!name) return
+    try {
+      const arts = JSON.parse(sessionStorage.getItem('anywei_compiled'))
+      const art = arts[name]
+      if (art?.abi) {
+        state.contract.abi = art.abi
+        state.contract.address = '' // No address yet — user can set one
+        contractStatus.innerHTML = `<span class="success">${esc(name)}: ${art.abi.filter(e => e.type === 'function').length} functions</span>`
+        renderProps()
+      }
+    } catch {}
+  }
+
   async function loadContract() {
     const raw = contractInput.value.trim()
     if (!raw) return
-    if (raw.startsWith('0x') && raw.length === 42) {
+    const mode = contractSource.value
+
+    if (mode === 'address' && raw.startsWith('0x') && raw.length === 42) {
+      contractStatus.innerHTML = '<span class="loading">Fetching ABI...</span>'
       try {
         const result = await fetchAbi(raw)
         if (result.abi) {
           state.contract.abi = result.abi
           state.contract.address = raw
-          contractInput.title = `${result.contractName || ''} — ${result.abi.filter(e => e.type === 'function').length} functions`
+          targetAddrInput.value = raw
+          contractStatus.innerHTML = `<span class="success">${esc(result.contractName || 'Loaded')}: ${result.abi.filter(e => e.type === 'function').length} functions at ${raw.slice(0, 8)}...</span>`
+        } else {
+          contractStatus.innerHTML = '<span class="error">Not verified — paste ABI manually</span>'
         }
-      } catch {}
+      } catch (e) {
+        contractStatus.innerHTML = `<span class="error">${esc(e.message)}</span>`
+      }
+    } else if (mode === 'address' && raw.startsWith('0x')) {
+      // Looks like an address but wrong length — might be typing
+      state.contract.address = raw
+      contractStatus.innerHTML = '<span class="text-dim">Enter full address (42 chars) to fetch ABI, or switch to "Paste ABI"</span>'
     } else {
+      // ABI mode — try to parse JSON
       try {
         const parsed = JSON.parse(raw)
         state.contract.abi = Array.isArray(parsed) ? parsed : parsed.abi
-      } catch {}
+        contractStatus.innerHTML = `<span class="success">${state.contract.abi.filter(e => e.type === 'function').length} functions loaded</span>`
+      } catch {
+        contractStatus.innerHTML = '<span class="error">Invalid ABI JSON</span>'
+      }
     }
     renderProps()
   }
