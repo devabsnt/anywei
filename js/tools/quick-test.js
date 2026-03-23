@@ -280,7 +280,117 @@ export function render(container, queryParams = {}) {
       try { decoded = decodeFunctionResult({ abi: artifact.abi, functionName: fnAbi.name, data: result.returnData }) } catch {}
     }
 
-    return { success: result.success, gas: result.executionGasUsed, decoded, error: result.error, duration }
+    return { success: result.success, gas: result.executionGasUsed, decoded, error: result.error, duration, data }
+  }
+
+  async function runTraceCall(c, fnAbi, args) {
+    const data = encodeFunctionData({ abi: artifact.abi, functionName: fnAbi.name, args })
+    const result = await c.traceCall({ from: CALLER, to: DEPLOY_ADDR, data })
+    let decoded = null
+    if (result.success && fnAbi.outputs?.length && result.returnData && result.returnData !== '0x') {
+      try { decoded = decodeFunctionResult({ abi: artifact.abi, functionName: fnAbi.name, data: result.returnData }) } catch {}
+    }
+    return { ...result, decoded, args }
+  }
+
+  function renderTraceViewer(traceResult, fnAbi, args) {
+    const steps = traceResult.trace || []
+    const status = traceResult.success ? '<span class="success">SUCCESS</span>' : '<span class="error">REVERTED</span>'
+
+    // Editable params for re-run
+    const inputs = fnAbi.inputs || []
+    let paramsHtml = '<div class="trace-params"><div class="trace-params-header">Parameters (edit and re-run)</div>'
+    for (let i = 0; i < inputs.length; i++) {
+      paramsHtml += `<div class="input-group" style="margin-bottom:4px"><label style="font-size:10px"><span class="text-purple">${esc(inputs[i].name || 'arg' + i)}</span> <span class="text-dim">${esc(inputs[i].type)}</span></label><input type="text" class="mono-input trace-param-input" data-idx="${i}" value="${esc(formatArg(args[i]))}" spellcheck="false" style="font-size:11px;padding:3px 6px"></div>`
+    }
+    paramsHtml += '<button class="btn btn-primary trace-rerun" style="margin-top:4px;font-size:11px;padding:4px 12px">Re-run with Trace</button></div>'
+
+    // Trace listing
+    let traceHtml = '<div class="trace-listing">'
+    traceHtml += '<div class="trace-header-row"><span class="trace-col-pc">PC</span><span class="trace-col-op">Opcode</span><span class="trace-col-gas">Gas Left</span><span class="trace-col-stack">Stack (top 4)</span></div>'
+
+    for (let i = 0; i < steps.length; i++) {
+      const s = steps[i]
+      const cls = s.isStorage ? 'trace-storage' : s.isCall ? 'trace-call' : s.isHalt ? 'trace-halt' : s.isLog ? 'trace-log' : ''
+      const stackTop = s.stack.slice(-4).reverse().map(v => v.length > 18 ? v.slice(0, 8) + '..' + v.slice(-4) : v).join(' ')
+
+      traceHtml += `<div class="trace-row ${cls}" data-step="${i}" tabindex="0">
+        <span class="trace-col-pc">${s.pc.toString(16).padStart(4, '0')}</span>
+        <span class="trace-col-op">${s.opcode}</span>
+        <span class="trace-col-gas">${s.gasLeft.toString()}</span>
+        <span class="trace-col-stack">${esc(stackTop)}</span>
+      </div>`
+    }
+    traceHtml += '</div>'
+
+    // Full stack detail panel (shown on click)
+    const detailHtml = '<div id="trace-detail" class="trace-detail"><div class="text-dim">Click a step to inspect full stack</div></div>'
+
+    output.innerHTML = `
+      <div class="result-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>${status} <span class="text-dim">&middot; ${steps.length} steps &middot; Gas: ${traceResult.executionGasUsed.toString()}</span></div>
+          <button class="btn trace-back" style="font-size:11px;padding:3px 10px">&larr; Back to results</button>
+        </div>
+        ${paramsHtml}
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <div style="flex:1;min-width:0">${traceHtml}</div>
+          <div style="width:280px;flex-shrink:0">${detailHtml}</div>
+        </div>
+      </div>
+    `
+
+    // Back button
+    output.querySelector('.trace-back').addEventListener('click', () => run())
+
+    // Re-run button
+    output.querySelector('.trace-rerun').addEventListener('click', async () => {
+      const paramEls = output.querySelectorAll('.trace-param-input')
+      const newArgs = inputs.map((inp, i) => coerceArg(paramEls[i]?.value?.trim() || '', inp.type))
+      progress.innerHTML = '<span class="loading">Re-running with trace...</span>'
+      client = null
+      const c = await deploy()
+      const newResult = await runTraceCall(c, fnAbi, newArgs)
+      renderTraceViewer(newResult, fnAbi, newArgs)
+      progress.innerHTML = ''
+    })
+
+    // Click step to show detail
+    output.querySelectorAll('.trace-row').forEach(row => {
+      row.addEventListener('click', () => {
+        output.querySelectorAll('.trace-row').forEach(r => r.classList.remove('trace-row-selected'))
+        row.classList.add('trace-row-selected')
+        const idx = parseInt(row.dataset.step)
+        const s = steps[idx]
+        const detail = document.getElementById('trace-detail')
+        detail.innerHTML = `
+          <div class="trace-detail-title">Step ${idx}</div>
+          <div class="trace-detail-row"><span class="text-dim">PC:</span> <span class="mono">0x${s.pc.toString(16)}</span></div>
+          <div class="trace-detail-row"><span class="text-dim">Opcode:</span> <span class="mono">${s.opcode}</span></div>
+          <div class="trace-detail-row"><span class="text-dim">Gas fee:</span> <span class="mono">${s.opcodeFee}</span></div>
+          <div class="trace-detail-row"><span class="text-dim">Gas left:</span> <span class="mono">${s.gasLeft.toString()}</span></div>
+          <div class="trace-detail-row"><span class="text-dim">Depth:</span> <span class="mono">${s.depth}</span></div>
+          <div class="trace-detail-section">Stack (${s.stack.length} items, top first)</div>
+          ${s.stack.slice().reverse().map((v, i) => `<div class="trace-stack-item"><span class="text-dim">${i}</span> <span class="mono" style="word-break:break-all">${v}</span></div>`).join('')}
+        `
+      })
+    })
+  }
+
+  function coerceArg(raw, type) {
+    if (!raw && type !== 'string') {
+      if (type === 'bool') return false
+      if (type === 'address') return CALLER
+      if (type.startsWith('uint') || type.startsWith('int')) return 0n
+      if (type.startsWith('bytes')) return '0x'
+      return ''
+    }
+    if (type === 'bool') return raw === 'true' || raw === '1'
+    if (type === 'address') return raw
+    if (type.startsWith('uint') || type.startsWith('int')) return BigInt(raw.replace(/,/g, ''))
+    if (type.startsWith('bytes')) return raw.startsWith('0x') ? raw : '0x' + raw
+    if (type.endsWith('[]')) { try { return JSON.parse(raw) } catch { return raw.split(',').map(s => s.trim()) } }
+    return raw
   }
 
   async function run() {
@@ -315,7 +425,8 @@ export function render(container, queryParams = {}) {
     progress.innerHTML = `<span class="loading">Running ${cases.length} test cases...</span>`
 
     let passCount = 0, failCount = 0
-    let html = `<div class="result-card"><table class="params-table"><thead><tr><th></th><th>Test Case</th><th>Gas</th><th>Result</th></tr></thead><tbody>`
+    const testResults = [] // store for trace button access
+    let html = `<div class="result-card"><table class="params-table"><thead><tr><th></th><th>Test Case</th><th>Gas</th><th>Result</th><th></th></tr></thead><tbody>`
 
     for (let i = 0; i < cases.length; i++) {
       if (!running) break
@@ -327,11 +438,14 @@ export function render(container, queryParams = {}) {
       if (result.success) passCount++
       else failCount++
 
+      testResults.push({ tc, result })
+
       html += `<tr class="${result.success ? '' : 'diff-item-changed'}">
         <td>${result.success ? '<span class="success">PASS</span>' : '<span class="error">FAIL</span>'}</td>
         <td class="mono" style="font-size:11px">${esc(tc.name)}</td>
         <td class="mono text-dim">${result.gas > 0n ? Number(result.gas).toLocaleString() : '-'}</td>
         <td class="mono" style="font-size:11px">${result.error ? '<span class="error">' + esc(result.error.slice(0, 80)) + '</span>' : (result.decoded != null ? esc(formatArg(result.decoded)) : 'OK')}</td>
+        <td><button class="btn-copy qt-trace-btn" data-idx="${i}" style="font-size:10px">Trace</button></td>
       </tr>`
 
       // Reset client state between tests for isolation
@@ -342,6 +456,22 @@ export function render(container, queryParams = {}) {
     html += '</tbody></table></div>'
     progress.innerHTML = `<span class="${failCount > 0 ? 'warning' : 'success'}">${passCount} passed, ${failCount} failed out of ${passCount + failCount} tests</span>`
     output.innerHTML = html
+
+    // Bind trace buttons
+    output.querySelectorAll('.qt-trace-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const idx = parseInt(btn.dataset.idx)
+        const { tc } = testResults[idx]
+        btn.textContent = '...'
+        btn.disabled = true
+        progress.innerHTML = '<span class="loading">Tracing...</span>'
+        client = null
+        const c2 = await deploy()
+        const traceResult = await runTraceCall(c2, fnAbi, tc.args)
+        renderTraceViewer(traceResult, fnAbi, tc.args)
+        progress.innerHTML = ''
+      })
+    })
   }
 
   async function runFuzz(c, fnAbi, iterations) {

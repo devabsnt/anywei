@@ -1,19 +1,24 @@
 // ── Tool registry ────────────────────────────────────────────
 const TOOLS = [
+  // ── Build ──
   { id: 'solidity-ide', path: '/ide', label: 'Solidity IDE', icon: '\u270E', keywords: 'solidity ide compile editor write code' },
+  { id: 'dapp-builder', path: '/builder', label: 'dApp Builder', icon: '\u25A8', keywords: 'dapp builder frontend wysiwyg drag drop ui' },
+  { id: 'quick-test', path: '/test', label: 'Quick Test', icon: '\u2713', keywords: 'test fuzz quick boundary smoke deploy bytecode' },
+  { id: 'gas-estimator', path: '/gas', label: 'Gas', icon: '\u0394', keywords: 'gas estimate cost price' },
+  // ── Decode ──
   { id: 'calldata-decoder', path: '/calldata', label: 'Decode Calldata', icon: '\u2933', keywords: 'decode calldata transaction input data' },
   { id: 'calldata-encoder', path: '/encode', label: 'Encode Calldata', icon: '\u2934', keywords: 'encode calldata build transaction' },
+  { id: 'tx-decoder', path: '/tx', label: 'Decode Tx', icon: '\u2B8A', keywords: 'transaction decode hash receipt events' },
   { id: 'event-decoder', path: '/events', label: 'Decode Events', icon: '\u2699', keywords: 'decode event log topics' },
   { id: 'error-decoder', path: '/errors', label: 'Decode Errors', icon: '\u26A0', keywords: 'decode error revert panic' },
-  { id: 'storage-slot', path: '/storage', label: 'Storage Slots', icon: '\u25A6', keywords: 'storage slot mapping keccak256 calculate' },
-  { id: 'selector-lookup', path: '/selectors', label: 'Selectors', icon: '\u2318', keywords: 'selector signature lookup 4byte function event' },
-  { id: 'unit-converter', path: '/convert', label: 'Convert', icon: '\u21C4', keywords: 'convert unit wei gwei ether hex decimal keccak address timestamp' },
+  // ── Inspect ──
   { id: 'abi-explorer', path: '/abi', label: 'ABI Explorer', icon: '\u2630', keywords: 'abi explorer contract functions events' },
   { id: 'bytecode-disassembler', path: '/bytecode', label: 'Bytecode', icon: '\u2328', keywords: 'bytecode disassemble opcode evm' },
   { id: 'contract-diff', path: '/diff', label: 'Diff', icon: '\u2260', keywords: 'diff compare contract abi bytecode' },
-  { id: 'gas-estimator', path: '/gas', label: 'Gas', icon: '\u0394', keywords: 'gas estimate cost price' },
-  { id: 'quick-test', path: '/test', label: 'Quick Test', icon: '\u2713', keywords: 'test fuzz quick boundary smoke deploy bytecode' },
-  { id: 'tx-decoder', path: '/tx', label: 'Decode Tx', icon: '\u2B8A', keywords: 'transaction decode hash receipt events' },
+  { id: 'storage-slot', path: '/storage', label: 'Storage Slots', icon: '\u25A6', keywords: 'storage slot mapping keccak256 calculate' },
+  { id: 'selector-lookup', path: '/selectors', label: 'Selectors', icon: '\u2318', keywords: 'selector signature lookup 4byte function event' },
+  // ── Utilities ──
+  { id: 'unit-converter', path: '/convert', label: 'Convert', icon: '\u21C4', keywords: 'convert unit wei gwei ether hex decimal keccak address timestamp' },
   { id: 'merkle-tree', path: '/merkle', label: 'Merkle Tree', icon: '\u2042', keywords: 'merkle tree root proof airdrop allowlist whitelist' },
   { id: 'create2-calc', path: '/create2', label: 'CREATE2', icon: '\u2316', keywords: 'create2 deterministic address deploy factory salt' },
   { id: 'eip712-signer', path: '/eip712', label: 'EIP-712', icon: '\u2712', keywords: 'eip712 sign verify typed data signature permit' },

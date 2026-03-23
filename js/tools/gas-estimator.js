@@ -192,7 +192,7 @@ export function render(container) {
   const localParams = document.getElementById('gas-local-params')
   const localRunBtn = document.getElementById('gas-local-run')
 
-  // Check for artifact from IDE
+  // Check for artifact from IDE — auto-load if found
   try {
     const fromIde = sessionStorage.getItem('anywei_compiled')
     if (fromIde) {
@@ -200,6 +200,8 @@ export function render(container) {
       const first = Object.values(all)[0]
       if (first) {
         artifactInput.value = JSON.stringify(first, null, 2)
+        // Trigger load after event listeners are bound
+        setTimeout(loadLocal, 0)
       }
     }
   } catch {}

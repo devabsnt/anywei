@@ -18,30 +18,38 @@
 
     <div class="layout">
       <nav id="sidebar" class="sidebar">
+        <div class="nav-section">Build</div>
         <a href="/ide" data-tool="solidity-ide" class="nav-item active">
           <span class="nav-icon">&#9998;</span> Solidity IDE
         </a>
+        <a href="/builder" data-tool="dapp-builder" class="nav-item">
+          <span class="nav-icon">&#9640;</span> dApp Builder
+        </a>
+        <a href="/test" data-tool="quick-test" class="nav-item">
+          <span class="nav-icon">&#10003;</span> Quick Test
+        </a>
+        <a href="/gas" data-tool="gas-estimator" class="nav-item">
+          <span class="nav-icon">&#916;</span> Gas
+        </a>
+
+        <div class="nav-section">Decode</div>
         <a href="/calldata" data-tool="calldata-decoder" class="nav-item">
-          <span class="nav-icon">&#10547;</span> Decode Calldata
+          <span class="nav-icon">&#10547;</span> Calldata
         </a>
         <a href="/encode" data-tool="calldata-encoder" class="nav-item">
-          <span class="nav-icon">&#10548;</span> Encode Calldata
+          <span class="nav-icon">&#10548;</span> Encode
+        </a>
+        <a href="/tx" data-tool="tx-decoder" class="nav-item">
+          <span class="nav-icon">&#11146;</span> Transaction
         </a>
         <a href="/events" data-tool="event-decoder" class="nav-item">
-          <span class="nav-icon">&#9881;</span> Decode Events
+          <span class="nav-icon">&#9881;</span> Events
         </a>
         <a href="/errors" data-tool="error-decoder" class="nav-item">
-          <span class="nav-icon">&#9888;</span> Decode Errors
+          <span class="nav-icon">&#9888;</span> Errors
         </a>
-        <a href="/storage" data-tool="storage-slot" class="nav-item">
-          <span class="nav-icon">&#9638;</span> Storage Slots
-        </a>
-        <a href="/selectors" data-tool="selector-lookup" class="nav-item">
-          <span class="nav-icon">&#8984;</span> Selectors
-        </a>
-        <a href="/convert" data-tool="unit-converter" class="nav-item">
-          <span class="nav-icon">&#8644;</span> Convert
-        </a>
+
+        <div class="nav-section">Inspect</div>
         <a href="/abi" data-tool="abi-explorer" class="nav-item">
           <span class="nav-icon">&#9776;</span> ABI Explorer
         </a>
@@ -51,14 +59,16 @@
         <a href="/diff" data-tool="contract-diff" class="nav-item">
           <span class="nav-icon">&#8800;</span> Diff
         </a>
-        <a href="/gas" data-tool="gas-estimator" class="nav-item">
-          <span class="nav-icon">&#916;</span> Gas
+        <a href="/storage" data-tool="storage-slot" class="nav-item">
+          <span class="nav-icon">&#9638;</span> Storage Slots
         </a>
-        <a href="/test" data-tool="quick-test" class="nav-item">
-          <span class="nav-icon">&#10003;</span> Quick Test
+        <a href="/selectors" data-tool="selector-lookup" class="nav-item">
+          <span class="nav-icon">&#8984;</span> Selectors
         </a>
-        <a href="/tx" data-tool="tx-decoder" class="nav-item">
-          <span class="nav-icon">&#11146;</span> Decode Tx
+
+        <div class="nav-section">Utilities</div>
+        <a href="/convert" data-tool="unit-converter" class="nav-item">
+          <span class="nav-icon">&#8644;</span> Convert
         </a>
         <a href="/merkle" data-tool="merkle-tree" class="nav-item">
           <span class="nav-icon">&#8258;</span> Merkle Tree

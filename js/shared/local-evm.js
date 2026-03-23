@@ -270,6 +270,62 @@ export class LocalEVM {
     return result.gasUsed
   }
 
+  /** Execute a call with full opcode tracing. Returns result + step-by-step trace. */
+  async traceCall({ from, to, data = '0x', value = 0n, gasLimit = 30000000n }) {
+    this._ensureReady()
+    const steps = []
+
+    // Register step listener
+    const onStep = (step) => {
+      const entry = {
+        pc: step.pc,
+        opcode: step.opcode.name,
+        opcodeFee: step.opcode.fee,
+        gasLeft: step.gasLeft,
+        depth: step.depth,
+        stack: step.stack.map(v => '0x' + v.toString(16)),
+      }
+      // Flag storage/call operations
+      if (step.opcode.name === 'SSTORE' || step.opcode.name === 'SLOAD') entry.isStorage = true
+      if (['CALL', 'DELEGATECALL', 'STATICCALL', 'CREATE', 'CREATE2'].includes(step.opcode.name)) entry.isCall = true
+      if (['REVERT', 'RETURN', 'STOP', 'SELFDESTRUCT', 'INVALID'].includes(step.opcode.name)) entry.isHalt = true
+      if (step.opcode.name.startsWith('LOG')) entry.isLog = true
+
+      steps.push(entry)
+    }
+
+    this.evm.events.on('step', onStep)
+
+    let result
+    try {
+      result = await this.evm.runCall({
+        caller: toAddr(from),
+        to: toAddr(to),
+        data: toBytes(data),
+        value: BigInt(value),
+        gasLimit: BigInt(gasLimit),
+      })
+    } finally {
+      this.evm.events.removeListener('step', onStep)
+    }
+
+    const execResult = result.execResult
+    const success = !execResult.exceptionError
+    const executionGas = execResult.executionGasUsed
+    const intrinsicGas = calculateIntrinsicGas(toBytes(data))
+
+    return {
+      success,
+      gasUsed: intrinsicGas + executionGas,
+      executionGasUsed: executionGas,
+      intrinsicGas,
+      returnData: toHex(execResult.returnValue),
+      error: execResult.exceptionError?.error || null,
+      logs: execResult.logs || [],
+      trace: steps,
+    }
+  }
+
   // ── State Snapshots ─────────────────────────────────────
 
   /** Take a state snapshot, returns snapshot ID */

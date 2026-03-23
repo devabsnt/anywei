@@ -82,18 +82,20 @@ function WalletBridge() {
 
 // ── Mount function ──────────────────────────────────────────
 
-let mounted = false
+let currentRoot = null
 
 /**
  * Mount the RainbowKit connect button into a target DOM element,
  * and an invisible bridge component that syncs wallet state to our vanilla JS.
  */
-export function mountWallet(buttonContainer, bridgeContainer) {
-  if (mounted) return
-  mounted = true
+export function mountWallet(buttonContainer) {
+  // Unmount previous root if container was destroyed (tab switch)
+  if (currentRoot) {
+    try { currentRoot.unmount() } catch {}
+  }
 
-  // Mount connect button
   const btnRoot = createRoot(buttonContainer)
+  currentRoot = btnRoot
   btnRoot.render(
     createElement(WagmiProvider, { config },
       createElement(QueryClientProvider, { client: queryClient },
