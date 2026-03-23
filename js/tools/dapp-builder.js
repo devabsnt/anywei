@@ -8,9 +8,17 @@ const COMPONENT_TYPES = {
   'call-button': { label: 'Call Button', icon: '\u25B6', defaults: { label: 'Send', functionName: '', params: {} } },
   'read-display': { label: 'Read Display', icon: '\u25C9', defaults: { label: '', functionName: '', pollInterval: 0, params: {} } },
   'input-field': { label: 'Input Field', icon: '\u2A37', defaults: { label: '', placeholder: '', paramType: 'text', boundId: '' } },
-  'heading': { label: 'Text / Heading', icon: 'T', defaults: { text: 'Heading', tag: 'h2' } },
+  'heading': { label: 'Text / Heading', icon: 'T', defaults: { text: 'Heading', tag: 'h2', align: 'center', fontFamily: 'system', fontSize: '' } },
   'balance': { label: 'Balance Display', icon: '\u039E', defaults: { label: 'Balance', token: '' } },
   'event-feed': { label: 'Event Feed', icon: '\u2759', defaults: { eventName: '', maxItems: 5 } },
+}
+
+const FONT_MAP = {
+  'system': '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+  'mono': '"Consolas", "Courier New", monospace',
+  'inter': '"Inter", -apple-system, sans-serif',
+  'serif': '"Georgia", "Times New Roman", serif',
+  'space': '"Space Grotesk", -apple-system, sans-serif',
 }
 
 // ── State ───────────────────────────────────────────────────
@@ -25,14 +33,26 @@ let state = {
   nextId: 1,
 }
 
+function findNextGridRow() {
+  if (state.components.length === 0) return 1
+  const maxRow = Math.max(...state.components.map(c => (c.position.row || 0) + (c.position.height || 1)))
+  return maxRow + 1
+}
+
+function findNextFreeformY() {
+  if (state.components.length === 0) return 20
+  const maxBottom = Math.max(...state.components.map(c => (c.position.y || 0) + (c.position.height || 48) + 8))
+  return maxBottom
+}
+
 function addComponent(type, pos) {
   const def = COMPONENT_TYPES[type]
   const comp = {
     id: 'c' + state.nextId++,
     type,
     position: state.layout === 'grid'
-      ? { col: pos?.col || 1, row: pos?.row || state.components.length + 1, width: type === 'heading' ? state.gridCols : 2, height: 1 }
-      : { x: pos?.x || 20, y: pos?.y || 20 + state.components.length * 60, width: 200, height: 44 },
+      ? { col: pos?.col || 1, row: pos?.row || findNextGridRow(), width: type === 'heading' ? state.gridCols : 2, height: 1 }
+      : { x: pos?.x || 20, y: pos?.y || findNextFreeformY(), width: type === 'heading' ? 500 : 300, height: 48 },
     props: { ...def.defaults },
     bindings: { onSuccess: [] },
     style: {},
@@ -227,10 +247,23 @@ export function render(container) {
         el.style.left = comp.position.x + 'px'
         el.style.top = comp.position.y + 'px'
         el.style.width = comp.position.width + 'px'
+        el.style.minHeight = comp.position.height + 'px'
       }
 
       const def = COMPONENT_TYPES[comp.type]
-      el.innerHTML = `<span class="db-comp-icon">${def.icon}</span> <span class="db-comp-label">${esc(comp.props.label || comp.props.text || comp.props.functionName || def.label)}</span><button class="db-comp-remove" data-id="${comp.id}">&times;</button>`
+
+      // Apply heading-specific styles
+      if (comp.type === 'heading') {
+        if (comp.props.align) el.style.textAlign = comp.props.align
+        if (comp.props.fontFamily && comp.props.fontFamily !== 'system') el.style.fontFamily = FONT_MAP[comp.props.fontFamily] || ''
+        if (comp.props.fontSize) el.style.fontSize = comp.props.fontSize + 'px'
+      }
+
+      // Apply font props to any component that has them
+      if (comp.style?.fontFamily) el.style.fontFamily = FONT_MAP[comp.style.fontFamily] || ''
+      if (comp.style?.fontSize) el.style.fontSize = comp.style.fontSize + 'px'
+
+      el.innerHTML = `<span class="db-comp-icon">${def.icon}</span> <span class="db-comp-label">${esc(comp.props.label || comp.props.text || comp.props.functionName || def.label)}</span><button class="db-comp-remove" data-id="${comp.id}">&times;</button><div class="db-resize-handle"></div>`
 
       // Track drag vs click
       let didDrag = false
@@ -302,23 +335,121 @@ export function render(container) {
         })
       }
 
+      // Resize handle (bottom-right corner)
+      const resizeHandle = el.querySelector('.db-resize-handle')
+      if (resizeHandle) {
+        resizeHandle.addEventListener('mousedown', (e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          const startX = e.clientX, startY = e.clientY
+
+          if (state.layout === 'freeform') {
+            const origW = comp.position.width
+            const origH = el.offsetHeight
+            const onMove = (ev) => {
+              comp.position.width = Math.max(80, origW + ev.clientX - startX)
+              el.style.width = comp.position.width + 'px'
+            }
+            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); renderProps() }
+            document.addEventListener('mousemove', onMove)
+            document.addEventListener('mouseup', onUp)
+          } else {
+            const rect = canvas.getBoundingClientRect()
+            const cellW = rect.width / state.gridCols
+            const onMove = (ev) => {
+              const deltaCols = Math.round((ev.clientX - startX) / cellW)
+              const newWidth = Math.max(1, Math.min(state.gridCols - comp.position.col + 1, comp.position.width + deltaCols))
+              if (newWidth !== comp.position.width) {
+                comp.position.width = newWidth
+                el.style.gridColumn = `${comp.position.col} / span ${newWidth}`
+              }
+            }
+            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); renderCanvas(); renderProps() }
+            document.addEventListener('mousemove', onMove)
+            document.addEventListener('mouseup', onUp)
+          }
+        })
+      }
+
       canvas.appendChild(el)
     }
 
     if (state.components.length === 0) {
       canvas.innerHTML = '<div class="db-canvas-empty">Drag components here or click them in the palette</div>'
     }
+
+    // Draw chain lines (SVG overlay)
+    const chains = state.components.filter(c => c.bindings.onSuccess?.length > 0)
+    if (chains.length > 0) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      svg.classList.add('db-chain-svg')
+      svg.setAttribute('width', '100%')
+      svg.setAttribute('height', '100%')
+      svg.style.position = 'absolute'
+      svg.style.inset = '0'
+      svg.style.pointerEvents = 'none'
+      svg.style.zIndex = '5'
+
+      // Need to wait for layout so we can read element positions
+      requestAnimationFrame(() => {
+        const canvasRect = canvas.getBoundingClientRect()
+        for (const comp of chains) {
+          const fromEl = canvas.querySelector(`[data-id="${comp.id}"]`)
+          if (!fromEl) continue
+          const fromRect = fromEl.getBoundingClientRect()
+          const fromX = fromRect.left - canvasRect.left + fromRect.width / 2
+          const fromY = fromRect.top - canvasRect.top + fromRect.height
+
+          for (const targetId of comp.bindings.onSuccess) {
+            const toEl = canvas.querySelector(`[data-id="${targetId}"]`)
+            if (!toEl) continue
+            const toRect = toEl.getBoundingClientRect()
+            const toX = toRect.left - canvasRect.left + toRect.width / 2
+            const toY = toRect.top - canvasRect.top
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+            line.setAttribute('x1', fromX)
+            line.setAttribute('y1', fromY)
+            line.setAttribute('x2', toX)
+            line.setAttribute('y2', toY)
+            line.setAttribute('stroke', '#f59e0b')
+            line.setAttribute('stroke-width', '1.5')
+            line.setAttribute('stroke-dasharray', '4 3')
+            line.setAttribute('opacity', '0.5')
+            svg.appendChild(line)
+
+            // Arrow head
+            const angle = Math.atan2(toY - fromY, toX - fromX)
+            const arrowSize = 6
+            const ax = toX - arrowSize * Math.cos(angle - 0.4)
+            const ay = toY - arrowSize * Math.sin(angle - 0.4)
+            const bx = toX - arrowSize * Math.cos(angle + 0.4)
+            const by = toY - arrowSize * Math.sin(angle + 0.4)
+            const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon')
+            arrow.setAttribute('points', `${toX},${toY} ${ax},${ay} ${bx},${by}`)
+            arrow.setAttribute('fill', '#f59e0b')
+            arrow.setAttribute('opacity', '0.6')
+            svg.appendChild(arrow)
+          }
+        }
+      })
+
+      canvas.appendChild(svg)
+    }
   }
 
-  // Delete key removes selected component
+  // Delete key removes selected component — immediate visual feedback
   document.addEventListener('keydown', (e) => {
     if ((e.key === 'Delete' || e.key === 'Backspace') && state.selected) {
-      // Don't delete if user is typing in an input
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return
       e.preventDefault()
+      // Immediately remove from DOM for instant feedback
+      const el = canvas.querySelector(`[data-id="${state.selected}"]`)
+      if (el) el.remove()
       removeComponent(state.selected)
-      renderCanvas()
       renderProps()
+      // Deferred full re-render for chain lines etc
+      requestAnimationFrame(() => renderCanvas())
     }
   })
 
@@ -349,6 +480,9 @@ export function render(container) {
     if (comp.type === 'heading') {
       html += propInput('Text', 'text', comp.props.text || '')
       html += propSelect('Tag', 'tag', comp.props.tag, { h1: 'H1', h2: 'H2', h3: 'H3', p: 'Paragraph' })
+      html += propSelect('Align', 'align', comp.props.align || 'center', { left: 'Left', center: 'Center', right: 'Right' })
+      html += propSelect('Font', 'fontFamily', comp.props.fontFamily || 'system', { system: 'System', mono: 'Monospace', inter: 'Inter', serif: 'Serif', space: 'Space Grotesk' })
+      html += propInput('Font size (px)', 'fontSize', comp.props.fontSize || '')
     }
 
     if (comp.type === 'call-button') {
@@ -357,16 +491,25 @@ export function render(container) {
       const fn = writeFns.find(f => f.name === comp.props.functionName)
       if (fn?.inputs?.length) {
         html += '<div class="db-prop-section">Parameter Sources</div>'
+        html += '<div class="db-prop-hint">Link input fields to function parameters</div>'
         for (const inp of fn.inputs) {
-          html += propSelect(`${inp.name} (${inp.type})`, `param_${inp.name}`, comp.props.params?.[inp.name] || '', { '': '— manual —', ...Object.fromEntries(inputComps.map(c => [c.id, c.props.label || c.id])) })
+          html += propSelect(`${inp.name} (${inp.type})`, `param_${inp.name}`, comp.props.params?.[inp.name] || '', { '': '— prompt user —', ...Object.fromEntries(inputComps.map(c => [c.id, c.props.label || c.id])) })
         }
       }
-      // Chaining
-      if (refreshable.length) {
-        html += '<div class="db-prop-section">On Success &rarr; Refresh</div>'
-        for (const rc of refreshable) {
+    }
+
+    // Chaining — available for call-button type
+    if (comp.type === 'call-button') {
+      const others = state.components.filter(c => c.id !== comp.id && (c.type === 'read-display' || c.type === 'balance' || c.type === 'event-feed'))
+      html += '<div class="db-prop-section">Chains</div>'
+      if (others.length === 0) {
+        html += '<div class="db-prop-hint">Add Read Display or Balance components, then chain them here to auto-refresh after this button\'s transaction succeeds.</div>'
+      } else {
+        html += '<div class="db-prop-hint">After this tx succeeds, refresh:</div>'
+        for (const rc of others) {
           const checked = comp.bindings.onSuccess.includes(rc.id) ? 'checked' : ''
-          html += `<label class="db-prop-check"><input type="checkbox" data-chain="${rc.id}" ${checked}> ${esc(rc.props.label || rc.props.functionName || rc.id)}</label>`
+          const rcDef = COMPONENT_TYPES[rc.type]
+          html += `<label class="db-prop-check"><input type="checkbox" data-chain="${rc.id}" ${checked}><span class="db-chain-icon">${rcDef.icon}</span> ${esc(rc.props.label || rc.props.functionName || rc.props.eventName || rc.id)}</label>`
         }
       }
     }
@@ -388,6 +531,13 @@ export function render(container) {
     if (comp.type === 'event-feed') {
       html += propSelect('Event', 'eventName', comp.props.eventName, Object.fromEntries(events.map(e => [e.name, e.name])))
       html += propInput('Max items', 'maxItems', comp.props.maxItems || '5')
+    }
+
+    // Style (for non-heading components — heading has its own font controls above)
+    if (comp.type !== 'heading') {
+      html += '<div class="db-prop-section">Style</div>'
+      html += propSelect('Font', 'style_fontFamily', comp.style?.fontFamily || 'system', { system: 'System', mono: 'Monospace', inter: 'Inter', serif: 'Serif', space: 'Space Grotesk' })
+      html += propInput('Font size (px)', 'style_fontSize', comp.style?.fontSize || '')
     }
 
     // Position
@@ -415,6 +565,9 @@ export function render(container) {
         } else if (key.startsWith('param_')) {
           if (!comp.props.params) comp.props.params = {}
           comp.props.params[key.slice(6)] = val
+        } else if (key.startsWith('style_')) {
+          if (!comp.style) comp.style = {}
+          comp.style[key.slice(6)] = val
         } else {
           comp.props[key] = val
         }
