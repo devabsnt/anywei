@@ -117,7 +117,7 @@ export function render(container) {
           rows += `<tr><td class="text-dim">${esc(inp.name || `arg${i}`)}</td><td class="text-dim">${esc(inp.type)}</td><td class="mono" style="word-break:break-all">${formatVal(val)}</td></tr>`
         }
         const explanation = explainCall(result.functionName, result.args, inputs)
-        return `<div class="result-card">${explanation ? `<div class="explain-box">${esc(explanation)}</div>` : ''}<div class="fn-signature"><span class="selector-badge">${esc(selector)}</span> <span class="text-purple">${esc(result.functionName)}</span></div><table class="params-table"><tbody>${rows}</tbody></table></div>`
+        return `<div class="result-card">${explanation ? `<details class="explain-toggle"><summary>Explain</summary><div class="explain-box">${esc(explanation)}</div></details>` : ''}<div class="fn-signature"><span class="selector-badge">${esc(selector)}</span> <span class="text-purple">${esc(result.functionName)}</span></div><table class="params-table"><tbody>${rows}</tbody></table></div>`
       } catch {}
     }
 

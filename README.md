@@ -1,121 +1,97 @@
 # anywei
 
-A browser-based toolkit for Solidity developers. Write, compile, test, deploy, and debug — all from one tab, no setup required.
+A browser-based toolkit for Solidity developers. Write, compile, test, deploy, and debug from one tab. No setup required.
 
 **[anywei.dev](https://anywei.dev)**
 
 ## Why
 
-Solidity development involves constantly switching between tools: Remix for quick edits, Etherscan for decoding, a terminal for Foundry commands, a converter bookmark for hex math, and a dozen browser tabs for reference. anywei puts everything in one place.
+Solidity development means constantly switching between tools. Remix for quick edits, Etherscan for decoding, a terminal for Foundry, a converter bookmark for hex math, and a dozen browser tabs for reference. anywei puts everything in one place.
 
-No installs. No accounts. No wallet required (until you want to deploy). Just open the site and paste.
+No installs. No accounts. No wallet required (until you want to deploy). Just open and paste.
 
 ## Tools
 
 ### Build
 
-**Solidity IDE** — Full in-browser development environment with CodeMirror editor, Solidity syntax highlighting, and compilation via the official solc compiler loaded from CDN. Supports `@openzeppelin` imports resolved automatically through jsDelivr. Includes a file manager, contract templates (ERC20, ERC721, ERC1155, UUPS Proxy, Vault), terminal panel with Problems/Output/Artifacts tabs, find and replace, code formatting, and shareable URLs. Connect any wallet via RainbowKit and deploy directly to any EVM chain.
+**Solidity IDE** - In-browser editor with CodeMirror syntax highlighting, solc compilation via Web Worker, `@openzeppelin` import resolution through jsDelivr, file manager, contract templates, terminal panel, find/replace, code formatting, shareable URLs, and wallet-based deployment to any EVM chain via RainbowKit. Live linting underlines security issues and gas optimizations as you type.
 
-*Compile and iterate on contracts without installing anything locally.*
+**dApp Builder** - Drag-and-drop frontend builder for contract interaction UIs. Load a contract from the IDE, a deployed address, or a predicted CREATE2 address. Drop components onto a grid canvas, chain them together with visual arrow connections, configure theming, and export as a standalone HTML file with ethers.js baked in.
 
-**dApp Builder** — Drag-and-drop frontend builder for contract interaction UIs. Load a contract from the IDE, a deployed address, or a predicted CREATE2 address. Drop components onto a grid canvas: connect wallet buttons, function call buttons, read displays, input fields, headings, balance displays, and event feeds. Chain components together (e.g., refresh a balance after a transaction succeeds) with visual arrow connections. Configure fonts, alignment, and theming (dark/light). Export as a standalone HTML file with ethers.js baked in — ready to host anywhere.
+**Quick Test / Fuzz** - Deploy compiled contracts to a local EVM and run tests without any network. Quick Test generates boundary-value test cases per parameter type. Fuzz generates random inputs for configurable iterations. Includes an opcode trace viewer with step-by-step execution, full stack inspection, and editable params for re-runs.
 
-*Go from contract to working frontend without scaffolding a React app.*
+**Gas Estimator** - Two modes. Deployed contracts: historical gas data from recent transactions with min/median/avg/max breakdown. Local contracts: eth_estimateGas on the local EVM with "Fill All Random" for quick testing. Both show costs at current and projected gas prices.
 
-**Quick Test / Fuzz** — Deploy compiled contracts to a local EVM (powered by @ethereumjs/evm) and run tests without any network. Quick Test generates boundary-value test cases per parameter type. Fuzz generates random inputs for configurable iterations. Includes an opcode trace viewer — click "Trace" on any test result to see step-by-step EVM execution with full stack inspection, editable params, and re-run capability.
+**Security Analyzer** - Runs after compilation and live as you type. Parses the Solidity AST to flag reentrancy, tx.origin auth, missing access control, unchecked call returns, selfdestruct, unbounded loops, ETH transfers in loops, missing zero-address checks, block.timestamp dependencies, floating pragmas, missing events, and unsafe ERC20 usage. Duplicate findings are grouped with expandable counts.
 
-*Smoke-test your contracts in seconds without writing a single test file.*
+**Gas Optimization Tips** - Inline green underlines in the editor for gas-saving patterns: `!= 0` over `> 0`, caching `.length`, `++i` over `i++`, custom errors over long require strings, `external` over `public`, `calldata` over `memory`, and more.
 
-**Gas Estimator** — Two modes. Deployed contracts: fetches recent transactions from Etherscan, groups by function selector, shows min/median/avg/max gas with costs at current and projected gas prices. Local contracts: runs eth_estimateGas on the local EVM against your compiled bytecode with a "Fill All Random" button for quick testing.
-
-*Know what a function costs before you ship it.*
-
-**Security Analyzer** — Runs automatically after compilation in the IDE. Parses the Solidity AST and flags common vulnerability patterns: reentrancy, tx.origin authentication, missing access control, unchecked call returns, selfdestruct, unbounded loops, ETH transfers in loops, missing zero-address checks, block.timestamp dependencies, floating pragmas, missing events, and unsafe ERC20 usage.
-
-*Catch the patterns behind most real-world exploits before they reach production.*
+**Contract Size Monitor** - After compilation, shows a progress bar for each contract against the 24KB EIP-170 limit. Green under 75%, yellow 75-90%, red over 90%.
 
 ### Decode
 
-**Calldata Decoder** — Paste raw transaction input data and see the decoded function call with named parameters. Fetches the contract ABI automatically, or falls back to 4byte.directory and OpenChain for unknown selectors.
+**Calldata Decoder** - Paste raw transaction input data to see the decoded function call with named parameters. Auto-fetches ABIs, falls back to 4byte.directory and OpenChain. Includes collapsible "Explain" with a plain-English description.
 
-*Understand what any transaction is doing at a glance.*
+**Calldata Encoder** - Enter a function signature or paste an ABI, fill in parameters (or hit "Fill Random"), and generate encoded calldata with a word-by-word breakdown and plain-English explanation.
 
-**Calldata Encoder** — Enter a function signature or paste an ABI, fill in parameters (or hit "Fill Random"), and generate encoded calldata with a word-by-word breakdown.
+**Transaction Decoder** - Paste a transaction hash to see sender, receiver, value, gas, cost, status, decoded calldata, and decoded events with explanations.
 
-*Build calldata for multisig proposals, Safe transactions, or manual cast send commands.*
+**Event Log Decoder** - Paste event topics and data (or full JSON log) to decode event parameters with signature lookup and plain-English explanations.
 
-**Transaction Decoder** — Paste a transaction hash to see the full breakdown: sender, receiver, value, gas used/price, cost, block, status. Decodes calldata and all emitted events with named parameters.
-
-*Understand any on-chain transaction without navigating Etherscan's UI.*
-
-**Event Log Decoder** — Paste event topics and data (or a full JSON log object) to decode event parameters. Matches topic0 against known signatures or decodes using a provided ABI.
-
-*Read raw event logs without manually matching topics to parameter types.*
-
-**Error / Revert Decoder** — Paste revert data from a failed transaction. Decodes Error(string), Panic(uint256) with all panic codes explained, and custom errors when an ABI is provided.
-
-*Turn opaque revert bytes into an actionable error message.*
+**Error / Revert Decoder** - Paste revert data to decode Error(string), Panic(uint256) with human-readable codes, and custom errors from an ABI.
 
 ### Inspect
 
-**ABI Explorer** — Paste a contract address or ABI JSON to see a clean breakdown of the interface. Grouped by constructor, write/read functions, events, and errors with selectors, search/filter, proxy detection, and ABI download.
+**ABI Explorer** - Paste a contract address or ABI JSON for a clean breakdown: constructor, write/read functions, events, errors with selectors, search/filter, proxy detection, and ABI download.
 
-*Navigate complex contract interfaces quickly.*
+**Bytecode Disassembler** - Parse bytecode into colour-coded opcodes. Shows stats (SSTORE/SLOAD count, external calls, JUMPDESTs), extracts function selectors, detects CBOR metadata.
 
-**Bytecode Disassembler** — Parse bytecode into opcodes with offsets, colour-coded by category (storage, memory, calls, control flow). Shows stats, extracts function selectors, and detects CBOR metadata.
+**Contract Diff** - Compare two ABIs or bytecodes side by side. Added/removed/changed items highlighted. Bytecode diff highlights individual changed bytes.
 
-*Inspect what the compiler actually produced.*
+**Storage Slot Calculator** - Compute storage slot positions for mappings, nested mappings, arrays, and structs. Shows keccak256 intermediate steps. Optionally reads the on-chain value.
 
-**Contract Diff** — Compare two ABIs or bytecodes side by side. ABI diff highlights added, removed, and changed items. Bytecode diff shows per-byte differences with individual changed bytes highlighted.
+**Selector / Signature Lookup** - Look up function/event signatures from selectors, or compute selectors from signatures. Uses OpenChain and 4byte.directory.
 
-*Verify exactly what changed in a proxy upgrade.*
+**Interface Checker** - Check if a contract correctly implements an interface. Supports ERC20, ERC721, ERC1155 standards or custom ABIs. Shows pass/fail per function with return type validation.
 
-**Storage Slot Calculator** — Compute storage slot positions for mappings, nested mappings, arrays, and structs with intermediate keccak256 steps. Optionally read the actual on-chain value.
-
-*Find and read any storage variable without the contract source.*
-
-**Selector / Signature Lookup** — Look up function/event signatures from selectors via OpenChain and 4byte.directory, or compute selectors from signatures.
-
-*Instantly identify unknown selectors from bytecode or transaction data.*
+**Proxy Inspector** - Paste any contract address to detect its proxy pattern (EIP-1967, EIP-1822, OpenZeppelin legacy, EIP-1167 minimal proxy, Beacon). Shows implementation address, admin, and all checked storage slots.
 
 ### Utilities
 
-**Unit Converter** — Live-updating conversions: wei/gwei/ether with USD price, decimal/hex/binary, keccak256 hashing, address checksumming, unix timestamps, and abi.encode/abi.encodePacked.
+**Unit Converter** - Live-updating conversions: wei/gwei/ether with USD, decimal/hex/binary, keccak256, address checksumming, timestamps, and abi.encode/encodePacked.
 
-*One dashboard for every conversion you reach for during development.*
+**Merkle Tree Generator** - Paste or upload addresses and amounts. Generates Merkle root and individual proofs. Export as JSON. Supports address-only mode for simple allowlists.
 
-**Merkle Tree Generator** — Paste addresses and amounts to generate a Merkle root and individual proofs. Export as JSON for contract integration.
+**CREATE2 Calculator** - Enter deployer, salt, and init code (or hash) to compute the deterministic deployment address. Live updates as you type.
 
-*Generate airdrop and allowlist Merkle trees without running a script.*
+**EIP-712 Signer / Verifier** - Build typed data, sign with a connected wallet, verify signatures by recovering the signer, or compute struct hashes.
 
-**CREATE2 Address Calculator** — Enter deployer, salt, and init code to compute the deterministic deployment address.
+**Multicall Builder** - Build batched calls for Multicall3. Add multiple targets and functions, encode into a single aggregate3 calldata.
 
-*Predict where a contract will be deployed before deploying it.*
+**Chain Reference** - Reference cards for 22+ EVM chains and testnets with chain ID, currency, RPC URL, and block explorer. Add and save custom chains.
 
-**EIP-712 Signer / Verifier** — Build EIP-712 typed data, sign with a connected wallet, verify signatures by recovering the signer, or compute struct hashes.
+## Features
 
-*Test permit signatures, gasless transactions, and off-chain auth flows.*
-
-**Multicall Builder** — Build batched calls for Multicall3. Add multiple target/function/argument combinations and encode into a single aggregate3 calldata.
-
-*Batch multiple contract reads into a single RPC call.*
-
-**Chain Reference** — Quick-reference cards for 22+ EVM chains and testnets: chain ID, native currency, RPC URL (click to copy), and block explorer link.
-
-*Look up chain IDs and RPCs without googling.*
+- **Dark/light theme** toggle (default dark, persists across sessions)
+- **Live gas ticker** in the footer showing current mainnet gas price
+- **"Explain This"** on all decoders generating plain-English descriptions without an LLM
+- **Command palette** (Ctrl+K) with fuzzy search and auto-detection of pasted data
+- **URL routing** with query param support for deep links
+- **Session persistence** for files, artifacts, deployed contracts, and builder state
+- **Mobile responsive** with icon-only nav bar on small screens
 
 ## Stack
 
-- **Vite** — bundler, dev server
-- **viem** — ABI encoding/decoding, hashing, wallet interaction
-- **CodeMirror 6** — editor with Solidity syntax highlighting
-- **@ethereumjs/evm** — local EVM for testing and gas estimation
-- **@solidity-parser/parser** — AST-based security analysis
-- **RainbowKit + wagmi** — wallet connection and chain management
-- **solc** — Solidity compiler loaded from official CDN in a Web Worker
-- **ethers.js** — baked into dApp Builder exports for standalone frontends
+- **Vite** for bundling
+- **viem** for ABI encoding/decoding, hashing, and wallet interaction
+- **CodeMirror 6** for the editor with Solidity syntax highlighting and inline linting
+- **@ethereumjs/evm** for local EVM execution
+- **@solidity-parser/parser** for AST-based security analysis
+- **RainbowKit + wagmi** for wallet connection and chain management
+- **solc** loaded from the official CDN in a Web Worker
+- **ethers.js** baked into dApp Builder exports
 
-Each tool is lazy-loaded on navigation — opening any tool doesn't load code for the others.
+Each tool is lazy-loaded. Opening any tool does not load code for the others.
 
 ## Development
 
@@ -124,7 +100,7 @@ npm install
 npm run dev
 ```
 
-The Vercel serverless functions in `api/` proxy Etherscan/Blockscout and RPC calls. For local development, these are proxied via Vite's dev server config.
+The Vercel serverless functions in `api/` proxy Etherscan/Blockscout and RPC calls.
 
 ## Built by
 

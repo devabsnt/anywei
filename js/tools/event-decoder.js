@@ -2,6 +2,7 @@ import { decodeEventLog, parseAbi } from 'viem'
 import { fetchAbi } from '../shared/abi-cache.js'
 import { lookupEventTopic } from '../shared/etherscan.js'
 import { esc, ensure0x, saveState, loadState, etherscanLink } from '../shared/formatters.js'
+import { explainEvent } from '../shared/explain.js'
 
 export function render(container) {
   container.innerHTML = `
@@ -131,7 +132,11 @@ export function render(container) {
         <td class="mono">${formatVal(val, inp.type)}</td>
       </tr>`
     }
+    const argValues = Array.isArray(args) ? args : inputs.map(i => args?.[i.name])
+    const explanation = explainEvent(name, argValues, inputs)
+
     return `<div class="result-card">
+      ${explanation ? `<details class="explain-toggle"><summary>Explain</summary><div class="explain-box">${esc(explanation)}</div></details>` : ''}
       <div class="fn-signature">event <span class="text-purple">${esc(name)}</span></div>
       ${rows ? `<table class="params-table"><thead><tr><th>#</th><th>Name</th><th>Type</th><th></th><th>Value</th></tr></thead><tbody>${rows}</tbody></table>` : ''}
     </div>`

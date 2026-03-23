@@ -279,32 +279,44 @@ export function render(container, queryParams = {}) {
   }])
 
   // Live linter — underlines gas optimizations and security issues as you type
+  // Helper: get the range of actual code on a line (skip leading whitespace)
+  function getCodeRange(doc, lineNum) {
+    const line = doc.line(lineNum)
+    const text = line.text
+    const indent = text.length - text.trimStart().length
+    return { from: line.from + indent, to: line.to }
+  }
+
   const solidityLinter = linter((view) => {
     const source = view.state.doc.toString()
     const diagnostics = []
 
-    // Gas optimization tips
+    // Gas optimization tips — underline from the specific column if available
     try {
       const gasTips = analyzeGasOptimizations(source)
       for (const tip of gasTips) {
         const line = view.state.doc.line(tip.line)
-        const from = tip.col != null ? line.from + tip.col : line.from
-        const to = Math.min(from + 20, line.to) // underline ~20 chars
+        const text = line.text
+        const indent = text.length - text.trimStart().length
+        // Use the specific column if provided, otherwise start after indentation
+        const from = tip.col != null ? line.from + Math.max(tip.col, indent) : line.from + indent
+        const to = Math.min(from + 20, line.to)
+        if (from >= to) continue
         diagnostics.push({ from, to, severity: 'info', message: `Gas: ${tip.message}`, source: 'anywei' })
       }
     } catch {}
 
-    // Security findings (only critical and high — don't overwhelm)
+    // Security findings (critical and high only)
     try {
       const findings = analyzeSource(source)
       for (const f of findings) {
         if (f.severity !== 'critical' && f.severity !== 'high') continue
         if (!f.line || f.line < 1) continue
         try {
-          const line = view.state.doc.line(f.line)
+          const { from, to } = getCodeRange(view.state.doc, f.line)
+          if (from >= to) continue
           diagnostics.push({
-            from: line.from,
-            to: line.to,
+            from, to,
             severity: f.severity === 'critical' ? 'error' : 'warning',
             message: `${f.title}: ${f.message}`,
             source: 'anywei'
@@ -314,7 +326,7 @@ export function render(container, queryParams = {}) {
     } catch {}
 
     return diagnostics
-  }, { delay: 800 }) // 800ms debounce — doesn't lag while typing
+  }, { delay: 800 })
 
   let editorView = new EditorView({
     state: EditorState.create({
@@ -1211,15 +1223,37 @@ contract MyContract {
       for (const w of warnings) problemsHtml += `<div class="term-line term-warning">${esc(w.formattedMessage || w.message)}</div>`
     }
 
-    // Security analysis
+    // Security analysis — group duplicate findings
     if (analyzeCheck.checked && !fatalErrors.length) {
       const findings = analyzeSource(source)
       if (findings.length > 0) {
         totalProblems += findings.length
         problemsHtml += '<div class="term-line term-dim" style="margin-top:8px;border-bottom:1px solid #3c3c3c;padding-bottom:4px">SECURITY ANALYSIS</div>'
+
+        // Group by title
+        const groups = new Map()
         for (const f of findings) {
-          const cls = f.severity === 'critical' ? 'term-error' : f.severity === 'high' ? 'term-warning' : f.severity === 'medium' ? 'term-warn-dim' : 'term-info'
-          problemsHtml += `<div class="term-line ${cls}"><span class="term-severity">[${f.severity.toUpperCase()}]</span> ${esc(f.title)}${f.line ? ` <span class="term-dim">(line ${f.line})</span>` : ''}</div><div class="term-line term-dim" style="padding-left:16px;font-size:11px">${esc(f.message)}</div>`
+          const key = f.title
+          if (!groups.has(key)) groups.set(key, { severity: f.severity, title: f.title, message: f.message, items: [] })
+          groups.get(key).items.push(f)
+        }
+
+        for (const [, group] of groups) {
+          const cls = group.severity === 'critical' ? 'term-error' : group.severity === 'high' ? 'term-warning' : group.severity === 'medium' ? 'term-warn-dim' : 'term-info'
+          const count = group.items.length
+
+          if (count === 1) {
+            const f = group.items[0]
+            problemsHtml += `<div class="term-line ${cls}"><span class="term-severity">[${f.severity.toUpperCase()}]</span> ${esc(f.title)}${f.line ? ` <span class="term-dim">(line ${f.line})</span>` : ''}</div><div class="term-line term-dim" style="padding-left:16px;font-size:11px">${esc(f.message)}</div>`
+          } else {
+            // Collapsible group
+            problemsHtml += `<details class="term-group"><summary class="term-line ${cls}"><span class="term-severity">[${group.severity.toUpperCase()}]</span> ${esc(group.title)} <span class="term-group-count">&times;${count}</span></summary>`
+            problemsHtml += `<div class="term-line term-dim" style="padding-left:16px;font-size:11px">${esc(group.message)}</div>`
+            for (const f of group.items) {
+              problemsHtml += `<div class="term-line term-dim" style="padding-left:16px;font-size:11px">&bull; line ${f.line || '?'}</div>`
+            }
+            problemsHtml += '</details>'
+          }
         }
       } else {
         problemsHtml += '<div class="term-line term-success" style="margin-top:8px">No security issues detected.</div>'

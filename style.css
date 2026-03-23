@@ -200,6 +200,12 @@ header .icon { font-size: 14px; }
   width: 100%;
   resize: vertical;
 }
+/* Textareas default to larger height */
+textarea.mono-input { min-height: 80px; }
+textarea.mono-input[rows="3"] { min-height: 100px; }
+textarea.mono-input[rows="4"] { min-height: 130px; }
+textarea.mono-input[rows="6"] { min-height: 180px; }
+textarea.mono-input[rows="10"] { min-height: 240px; }
 .mono-input:focus { border-color: var(--border-focus); }
 .mono-input[readonly] { color: var(--text-dim); }
 
@@ -286,6 +292,23 @@ select.mono-input { cursor: pointer; }
   margin-bottom: 8px;
 }
 
+/* Explain This — collapsible */
+.explain-toggle {
+  margin-bottom: 6px;
+}
+.explain-toggle > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 11px;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  user-select: none;
+}
+.explain-toggle > summary::-webkit-details-marker { display: none; }
+.explain-toggle > summary::after { content: ' \u25BC'; font-size: 8px; }
+.explain-toggle[open] > summary::after { content: ' \u25B2'; }
 .explain-box {
   background: var(--accent-dim);
   border-left: 3px solid var(--accent);
@@ -293,7 +316,7 @@ select.mono-input { cursor: pointer; }
   font-size: 13px;
   font-family: var(--font-sans);
   color: var(--text-bright);
-  margin-bottom: 8px;
+  margin-top: 4px;
   line-height: 1.4;
 }
 .explain-inline {
@@ -702,6 +725,19 @@ select.mono-input { cursor: pointer; }
 .term-bright { color: #d4d4d4; font-weight: 600; }
 .term-severity { font-weight: 700; margin-right: 4px; }
 .term-gas { color: #4ade80; }
+.term-group { margin: 1px 0; }
+.term-group > summary { cursor: pointer; list-style: none; }
+.term-group > summary::-webkit-details-marker { display: none; }
+.term-group > summary::before { content: '\u25B6 '; font-size: 8px; margin-right: 2px; }
+.term-group[open] > summary::before { content: '\u25BC '; }
+.term-group-count {
+  background: #333;
+  color: var(--text-dim);
+  font-size: 10px;
+  padding: 0 5px;
+  margin-left: 4px;
+  border-radius: 2px;
+}
 
 /* Contract size bar */
 .size-bar {

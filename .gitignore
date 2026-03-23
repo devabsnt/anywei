@@ -4,6 +4,7 @@ dist
 .claude
 pivot.md
 test-contracts/
+TESTING.md
 
 .env
 .env.local

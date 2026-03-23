@@ -149,7 +149,7 @@ function renderDecoded(selector, fnName, abi, args) {
 
   return `<div class="result-card">
     <div class="selector-badge">${esc(selector)}</div>
-    ${explanation ? `<div class="explain-box">${esc(explanation)}</div>` : ''}
+    ${explanation ? `<details class="explain-toggle"><summary>Explain</summary><div class="explain-box">${esc(explanation)}</div></details>` : ''}
     <div class="fn-signature"><span class="text-purple">${esc(fnName)}</span>(${inputs.map(i => `<span class="text-dim">${esc(i.type)}</span> <span class="text-blue">${esc(i.name)}</span>`).join(', ')})</div>
     ${rows ? `<table class="params-table"><thead><tr><th>#</th><th>Name</th><th>Type</th><th>Value</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="text-dim">No parameters</p>'}
   </div>`
