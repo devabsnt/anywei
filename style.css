@@ -48,9 +48,10 @@
 /* ── Background watermark ─────────────────────────────────── */
 .bg-eth {
   position: fixed;
-  right: 0;
+  /* Center the diamond's midpoint on the right edge of the 1200px app container */
+  left: calc(50% + 600px);
   top: 50%;
-  transform: translateY(-50%) translateX(55%);
+  transform: translate(-50%, -50%);
   font-family: var(--font-mono);
   font-size: 7px;
   line-height: 1.15;
@@ -61,7 +62,6 @@
   white-space: pre;
   margin: 0;
   padding: 0;
-  overflow: hidden;
 }
 .light-theme .bg-eth { color: #eee; }
 
