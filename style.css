@@ -182,9 +182,12 @@ header .icon { font-size: 14px; }
 /* ── Tool Area ────────────────────────────────────────────── */
 .tool-area {
   padding: 20px 32px 20px 36px;
+  margin-left: 8px;
   overflow-y: auto;
   height: 100%;
 }
+/* IDE removes the gap since it's full-width */
+.tool-area:has(.ide-layout) { margin-left: 0; }
 
 .tool-header h2 {
   font-size: 18px;
