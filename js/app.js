@@ -76,12 +76,15 @@ async function navigateTo(tool, queryParams) {
 }
 
 // ── Command Palette ──────────────────────────────────────────
+let paletteIndex = 0
+
 function openPalette() {
   const palette = document.getElementById('cmd-palette')
   palette.classList.remove('hidden')
   const input = document.getElementById('cmd-input')
   input.value = ''
   input.focus()
+  paletteIndex = 0
   renderPaletteResults('')
 }
 
@@ -97,7 +100,8 @@ function renderPaletteResults(query) {
     filtered = TOOLS.filter(t =>
       t.label.toLowerCase().includes(q) ||
       t.keywords.includes(q) ||
-      t.id.includes(q)
+      t.id.includes(q) ||
+      (t.seo && t.seo.toLowerCase().includes(q))
     )
   }
 
@@ -105,9 +109,9 @@ function renderPaletteResults(query) {
   let suggestion = null
   if (q.startsWith('0x') || q.startsWith('0X')) {
     const len = q.length
-    if (len === 42) suggestion = { tool: TOOLS.find(t => t.id === 'abi-explorer'), hint: 'Explore this address' }
+    if (len === 42) suggestion = { tool: TOOLS.find(t => t.id === 'explorer'), hint: 'Look up this address' }
     else if (len === 10) suggestion = { tool: TOOLS.find(t => t.id === 'selector-lookup'), hint: 'Look up this selector' }
-    else if (len === 66) suggestion = { tool: TOOLS.find(t => t.id === 'event-decoder'), hint: 'Decode this topic/hash' }
+    else if (len === 66) suggestion = { tool: TOOLS.find(t => t.id === 'explorer'), hint: 'Look up this transaction' }
     else if (len > 10) suggestion = { tool: TOOLS.find(t => t.id === 'calldata-decoder'), hint: 'Decode this calldata' }
   } else if (q.startsWith('[') || q.startsWith('{')) {
     suggestion = { tool: TOOLS.find(t => t.id === 'abi-explorer'), hint: 'Explore this ABI' }
@@ -116,29 +120,46 @@ function renderPaletteResults(query) {
   }
 
   container.innerHTML = ''
+  let idx = 0
 
   if (suggestion) {
     const item = document.createElement('div')
     item.className = 'cmd-item cmd-suggestion'
-    item.innerHTML = `<span class="cmd-icon">${suggestion.tool.icon}</span> <span>${suggestion.hint}</span>`
-    item.addEventListener('click', () => {
-      closePalette()
-      navigateTo(suggestion.tool)
-    })
+    item.dataset.idx = idx++
+    item.innerHTML = `<span class="cmd-icon">${suggestion.tool.icon}</span><span class="cmd-label">${suggestion.hint}</span>`
+    item.addEventListener('click', () => { closePalette(); navigateTo(suggestion.tool) })
     container.appendChild(item)
   }
 
-  for (const tool of filtered) {
+  for (let i = 0; i < filtered.length; i++) {
+    const tool = filtered[i]
     const item = document.createElement('div')
     item.className = 'cmd-item'
+    item.dataset.idx = idx
     if (activeTool?.id === tool.id) item.classList.add('cmd-active')
-    item.innerHTML = `<span class="cmd-icon">${tool.icon}</span> <span>${tool.label}</span>`
-    item.addEventListener('click', () => {
-      closePalette()
-      navigateTo(tool)
-    })
+    // Show number hint for first 9
+    const numHint = idx < 9 ? `<span class="cmd-num">${idx + 1}</span>` : ''
+    item.innerHTML = `${numHint}<span class="cmd-icon">${tool.icon}</span><span class="cmd-label">${tool.label}</span><span class="cmd-desc">${tool.seo || ''}</span>`
+    item.addEventListener('click', () => { closePalette(); navigateTo(tool) })
     container.appendChild(item)
+    idx++
   }
+
+  // Highlight first item
+  paletteIndex = 0
+  updatePaletteHighlight()
+}
+
+function updatePaletteHighlight() {
+  const items = document.querySelectorAll('.cmd-item')
+  items.forEach((el, i) => el.classList.toggle('cmd-highlighted', i === paletteIndex))
+  const highlighted = items[paletteIndex]
+  if (highlighted) highlighted.scrollIntoView({ block: 'nearest' })
+}
+
+function selectPaletteItem() {
+  const items = document.querySelectorAll('.cmd-item')
+  if (items[paletteIndex]) items[paletteIndex].click()
 }
 
 // ── Init ─────────────────────────────────────────────────────
@@ -182,17 +203,72 @@ function init() {
   document.getElementById('cmd-input').addEventListener('input', (e) => renderPaletteResults(e.target.value))
   document.getElementById('cmd-input').addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closePalette()
-    if (e.key === 'Enter') {
-      const first = document.querySelector('.cmd-item')
-      if (first) first.click()
+    if (e.key === 'Enter') { e.preventDefault(); selectPaletteItem() }
+    if (e.key === 'ArrowDown') { e.preventDefault(); paletteIndex = Math.min(paletteIndex + 1, document.querySelectorAll('.cmd-item').length - 1); updatePaletteHighlight() }
+    if (e.key === 'ArrowUp') { e.preventDefault(); paletteIndex = Math.max(paletteIndex - 1, 0); updatePaletteHighlight() }
+    // Number keys 1-9 select items directly
+    if (e.key >= '1' && e.key <= '9' && !e.ctrlKey && !e.metaKey) {
+      const idx = parseInt(e.key) - 1
+      const items = document.querySelectorAll('.cmd-item')
+      if (items[idx]) { e.preventDefault(); items[idx].click() }
     }
   })
 
-  // Global keyboard shortcut
+  // Global keyboard shortcuts
   document.addEventListener('keydown', (e) => {
+    const tag = e.target.tagName
+    const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.closest('.cm-editor')
+
+    // Ctrl+K or Cmd+K opens palette
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault()
       openPalette()
+      return
+    }
+
+    // "/" opens palette when not typing
+    if (e.key === '/' && !isTyping) {
+      e.preventDefault()
+      openPalette()
+      return
+    }
+
+    // Sidebar keyboard navigation:
+    // Left arrow = enter sidebar nav mode (highlights current tool in sidebar)
+    // Up/Down = move between tools while in sidebar mode
+    // Right arrow or Enter = confirm selection and focus tool
+    // Escape = exit sidebar mode
+    const paletteOpen = !document.getElementById('cmd-palette').classList.contains('hidden')
+    const sidebarActive = document.querySelector('.sidebar.keyboard-nav')
+
+    if (!paletteOpen && e.key === 'ArrowLeft' && !isTyping && !sidebarActive) {
+      e.preventDefault()
+      document.getElementById('sidebar').classList.add('keyboard-nav')
+      const active = document.querySelector('.nav-item.active')
+      if (active) active.focus()
+      return
+    }
+
+    if (sidebarActive) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        const currentIdx = TOOLS.findIndex(t => t.id === activeTool?.id)
+        let nextIdx
+        if (e.key === 'ArrowDown') nextIdx = Math.min(currentIdx + 1, TOOLS.length - 1)
+        else nextIdx = Math.max(currentIdx - 1, 0)
+        if (nextIdx !== currentIdx) navigateTo(TOOLS[nextIdx])
+        // Keep sidebar in nav mode and focus the new item
+        setTimeout(() => {
+          document.getElementById('sidebar').classList.add('keyboard-nav')
+          const active = document.querySelector('.nav-item.active')
+          if (active) active.focus()
+        }, 10)
+      }
+      if (e.key === 'ArrowRight' || e.key === 'Enter' || e.key === 'Escape') {
+        e.preventDefault()
+        document.getElementById('sidebar').classList.remove('keyboard-nav')
+        document.getElementById('tool-area').focus()
+      }
     }
   })
 

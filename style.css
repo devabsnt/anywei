@@ -143,6 +143,8 @@ header .icon { font-size: 14px; }
   display: none;
 }
 .nav-item.active .nav-sub { display: block; color: var(--accent-dim); }
+.sidebar.keyboard-nav { box-shadow: inset -2px 0 0 var(--accent); }
+.sidebar.keyboard-nav .nav-item:focus { outline: none; background: var(--bg-hover); }
 .nav-item:hover {
   color: var(--text);
   background: var(--bg-hover);
@@ -1195,20 +1197,21 @@ select.mono-input { cursor: pointer; }
   z-index: 100;
   display: flex;
   justify-content: center;
-  padding-top: 20vh;
+  padding-top: 48px;
+  align-items: flex-start;
 }
 .cmd-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.5);
 }
 .cmd-modal {
   position: relative;
-  width: 500px;
+  width: 560px;
   max-width: 90vw;
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
 }
 .cmd-input {
   width: 100%;
@@ -1217,30 +1220,47 @@ select.mono-input { cursor: pointer; }
   border-bottom: 1px solid var(--border);
   color: var(--text-bright);
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 15px;
   padding: 14px 16px;
   outline: none;
 }
+.cmd-input::placeholder { color: #555; }
 .cmd-results {
-  max-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
 }
 .cmd-item {
-  padding: 10px 16px;
+  padding: 8px 16px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: var(--text);
+  border-left: 2px solid transparent;
 }
-.cmd-item:hover { background: var(--bg-hover); color: var(--accent); }
+.cmd-item:hover, .cmd-highlighted { background: var(--bg-hover); color: var(--accent); border-left-color: var(--accent); }
 .cmd-active { color: var(--accent); }
 .cmd-suggestion {
   background: var(--accent-dim);
   border-bottom: 1px solid var(--border);
 }
-.cmd-icon { font-size: 14px; width: 20px; text-align: center; }
+.cmd-icon { font-size: 13px; width: 18px; text-align: center; flex-shrink: 0; }
+.cmd-label { font-weight: 500; white-space: nowrap; }
+.cmd-desc { color: #555; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-left: auto; font-family: var(--font-sans); }
+.cmd-num {
+  font-size: 9px;
+  color: #555;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+}
 
 /* ── Footer ───────────────────────────────────────────────── */
 footer {
