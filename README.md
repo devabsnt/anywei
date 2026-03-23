@@ -74,7 +74,7 @@ No installs. No accounts. No wallet required (until you want to deploy). Just op
 
 - **Dark/light theme** toggle (default dark, persists across sessions)
 - **Live gas ticker** in the footer showing current mainnet gas price
-- **"Explain This"** on all decoders generating plain-English descriptions without an LLM
+- **"Explain This"** on all decoders generating plain-English descriptions
 - **Command palette** (Ctrl+K) with fuzzy search and auto-detection of pasted data
 - **URL routing** with query param support for deep links
 - **Session persistence** for files, artifacts, deployed contracts, and builder state
