@@ -1,7 +1,6 @@
 import { encodeFunctionData, parseAbi, toFunctionSelector } from 'viem'
 import { fetchAbi } from '../shared/abi-cache.js'
 import { esc, copyBtn, ensure0x, strip0x, saveState, loadState } from '../shared/formatters.js'
-import { explainCall } from '../shared/explain.js'
 
 export function render(container) {
   container.innerHTML = `
@@ -149,10 +148,7 @@ export function render(container) {
         words.push(`<div class="raw-word"><span class="text-dim">${String(i / 64).padStart(3)}</span> ${esc(word)} <span class="text-dim">// ${esc(paramLabel)}</span></div>`)
       }
 
-      const explanation = explainCall(selectedFn.name, args, inputs)
-
       output.innerHTML = `<div class="result-card">
-        ${explanation ? `<details class="explain-toggle"><summary>Explain</summary><div class="explain-box">${esc(explanation)}</div></details>` : ''}
         <div class="result-row"><span class="text-dim">Full calldata:</span></div>
         <div class="mono copyable" id="enc-result">${esc(data)}</div>
         <div style="margin-top:8px"><span class="text-dim">Selector:</span> <span class="mono selector-badge">${esc(selector)}</span></div>

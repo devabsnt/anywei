@@ -30,13 +30,13 @@ No installs. No accounts. No wallet required (until you want to deploy). Just op
 
 ### Decode
 
-**Calldata Decoder** - Paste raw transaction input data to see the decoded function call with named parameters. Auto-fetches ABIs, falls back to 4byte.directory and OpenChain. Includes collapsible "Explain" with a plain-English description.
+**Calldata Decoder** - Paste raw transaction input data to see the decoded function call with named parameters. Auto-fetches ABIs, falls back to 4byte.directory and OpenChain.
 
-**Calldata Encoder** - Enter a function signature or paste an ABI, fill in parameters (or hit "Fill Random"), and generate encoded calldata with a word-by-word breakdown and plain-English explanation.
+**Calldata Encoder** - Enter a function signature or paste an ABI, fill in parameters (or hit "Fill Random"), and generate encoded calldata with a word-by-word breakdown.
 
-**Transaction Decoder** - Paste a transaction hash to see sender, receiver, value, gas, cost, status, decoded calldata, and decoded events with explanations.
+**Transaction Decoder** - Paste a transaction hash to see sender, receiver, value, gas, cost, status, decoded calldata, and all emitted events.
 
-**Event Log Decoder** - Paste event topics and data (or full JSON log) to decode event parameters with signature lookup and plain-English explanations.
+**Event Log Decoder** - Paste event topics and data (or full JSON log) to decode event parameters with signature lookup.
 
 **Error / Revert Decoder** - Paste revert data to decode Error(string), Panic(uint256) with human-readable codes, and custom errors from an ABI.
 
@@ -74,7 +74,6 @@ No installs. No accounts. No wallet required (until you want to deploy). Just op
 
 - **Dark/light theme** toggle (default dark, persists across sessions)
 - **Live gas ticker** in the footer showing current mainnet gas price
-- **"Explain This"** on all decoders generating plain-English descriptions
 - **Command palette** (Ctrl+K) with fuzzy search and auto-detection of pasted data
 - **URL routing** with query param support for deep links
 - **Session persistence** for files, artifacts, deployed contracts, and builder state
