@@ -25,21 +25,37 @@ const CHAINS = [
   { id: 1101, name: 'Polygon zkEVM', symbol: 'ETH', explorer: 'https://zkevm.polygonscan.com', rpc: 'https://zkevm-rpc.com', type: 'mainnet' },
 ]
 
+const CUSTOM_CHAINS_KEY = 'anywei_custom_chains'
+
+function loadCustomChains() {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_CHAINS_KEY)) || [] } catch { return [] }
+}
+function saveCustomChains(chains) {
+  localStorage.setItem(CUSTOM_CHAINS_KEY, JSON.stringify(chains))
+}
+
 export function render(container) {
+  let customChains = loadCustomChains()
+
   container.innerHTML = `
     <div class="tool-header">
       <h2>Chain Reference</h2>
       <p class="tool-desc">Quick reference for EVM chain IDs, RPCs, and block explorers.</p>
     </div>
     <div class="tool-body">
-      <div class="input-group">
-        <input type="text" id="chain-search" class="mono-input" placeholder="Search by name, chain ID, or symbol..." spellcheck="false">
+      <div class="input-row" style="gap:8px;align-items:flex-end">
+        <div class="input-group" style="flex:1">
+          <input type="text" id="chain-search" class="mono-input" placeholder="Search by name, chain ID, or symbol..." spellcheck="false">
+        </div>
+        <button id="chain-add-btn" class="btn">+ Add Chain</button>
       </div>
       <div class="mode-tabs" style="margin-bottom:12px">
         <button class="mode-btn active" data-filter="all">All</button>
         <button class="mode-btn" data-filter="mainnet">Mainnets</button>
         <button class="mode-btn" data-filter="testnet">Testnets</button>
+        <button class="mode-btn" data-filter="custom">Custom</button>
       </div>
+      <div id="chain-add-form" class="hidden"></div>
       <div id="chain-list"></div>
     </div>
   `
@@ -56,15 +72,58 @@ export function render(container) {
     })
   })
 
+  document.getElementById('chain-add-btn').addEventListener('click', showAddForm)
   searchInput.addEventListener('input', renderList)
   renderList()
+
+  function showAddForm() {
+    const form = document.getElementById('chain-add-form')
+    form.classList.remove('hidden')
+    form.innerHTML = `
+      <div class="chain-card" style="border-color:var(--accent)">
+        <div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px">Add Custom Chain</div>
+        <div class="input-group"><label>Chain name</label><input type="text" id="cc-name" class="mono-input" placeholder="My Chain" spellcheck="false"></div>
+        <div class="input-row" style="gap:8px">
+          <div class="input-group flex-1"><label>Chain ID</label><input type="text" id="cc-id" class="mono-input" placeholder="12345" spellcheck="false"></div>
+          <div class="input-group flex-1"><label>Currency symbol</label><input type="text" id="cc-symbol" class="mono-input" placeholder="ETH" spellcheck="false"></div>
+        </div>
+        <div class="input-group"><label>RPC URL</label><input type="text" id="cc-rpc" class="mono-input" placeholder="https://..." spellcheck="false"></div>
+        <div class="input-group"><label>Block explorer URL</label><input type="text" id="cc-explorer" class="mono-input" placeholder="https://..." spellcheck="false"></div>
+        <div class="input-row" style="gap:8px">
+          <div class="input-group" style="width:120px"><label>Type</label><select id="cc-type" class="mono-input"><option value="mainnet">Mainnet</option><option value="testnet" selected>Testnet</option></select></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="cc-save" class="btn btn-primary">Save Chain</button>
+          <button id="cc-cancel" class="btn">Cancel</button>
+        </div>
+      </div>
+    `
+    document.getElementById('cc-save').addEventListener('click', () => {
+      const name = document.getElementById('cc-name').value.trim()
+      const id = parseInt(document.getElementById('cc-id').value.trim())
+      const symbol = document.getElementById('cc-symbol').value.trim() || 'ETH'
+      const rpc = document.getElementById('cc-rpc').value.trim()
+      const explorer = document.getElementById('cc-explorer').value.trim()
+      const type = document.getElementById('cc-type').value
+      if (!name || !id) return
+      customChains.push({ id, name, symbol, rpc, explorer, type, custom: true })
+      saveCustomChains(customChains)
+      form.classList.add('hidden')
+      form.innerHTML = ''
+      renderList()
+    })
+    document.getElementById('cc-cancel').addEventListener('click', () => { form.classList.add('hidden'); form.innerHTML = '' })
+    document.getElementById('cc-name').focus()
+  }
 
   function renderList() {
     const q = searchInput.value.toLowerCase().trim()
     const list = document.getElementById('chain-list')
 
-    let filtered = CHAINS
-    if (filter !== 'all') filtered = filtered.filter(c => c.type === filter)
+    let allChains = [...CHAINS, ...customChains]
+    let filtered = allChains
+    if (filter === 'custom') filtered = customChains
+    else if (filter !== 'all') filtered = filtered.filter(c => c.type === filter)
     if (q) filtered = filtered.filter(c =>
       c.name.toLowerCase().includes(q) ||
       String(c.id).includes(q) ||
@@ -72,22 +131,24 @@ export function render(container) {
     )
 
     list.innerHTML = filtered.map(c => `
-      <div class="chain-card">
+      <div class="chain-card ${c.custom ? 'chain-card-custom' : ''}">
         <div class="chain-card-header">
           <span class="chain-name">${esc(c.name)}</span>
           <span class="chain-id">${c.id}</span>
           <span class="badge ${c.type === 'testnet' ? 'view-badge' : 'payable-badge'}">${c.type}</span>
+          ${c.custom ? '<span class="badge" style="border-color:var(--accent);color:var(--accent)">custom</span>' : ''}
+          ${c.custom ? `<button class="chain-delete" data-id="${c.id}" title="Remove">&times;</button>` : ''}
         </div>
         <div class="chain-details">
           <div class="chain-row"><span class="text-dim">Chain ID</span><span class="mono">${c.id} <span class="text-dim">(0x${c.id.toString(16)})</span></span></div>
           <div class="chain-row"><span class="text-dim">Currency</span><span class="mono">${esc(c.symbol)}</span></div>
-          <div class="chain-row"><span class="text-dim">RPC</span><span class="mono chain-copyable" data-copy="${esc(c.rpc)}">${esc(c.rpc)}</span></div>
-          <div class="chain-row"><span class="text-dim">Explorer</span><a href="${c.explorer}" target="_blank" class="text-blue">${esc(c.explorer)}</a></div>
+          <div class="chain-row"><span class="text-dim">RPC</span><span class="mono chain-copyable" data-copy="${esc(c.rpc)}">${esc(c.rpc || '—')}</span></div>
+          <div class="chain-row"><span class="text-dim">Explorer</span>${c.explorer ? `<a href="${c.explorer}" target="_blank" class="text-blue">${esc(c.explorer)}</a>` : '<span class="text-dim">—</span>'}</div>
         </div>
       </div>
     `).join('')
 
-    // Copy on click for RPC URLs
+    // Copy on click
     list.querySelectorAll('.chain-copyable').forEach(el => {
       el.style.cursor = 'pointer'
       el.title = 'Click to copy'
@@ -96,6 +157,16 @@ export function render(container) {
         const orig = el.textContent
         el.textContent = 'Copied!'
         setTimeout(() => el.textContent = orig, 1000)
+      })
+    })
+
+    // Delete custom chains
+    list.querySelectorAll('.chain-delete').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = parseInt(btn.dataset.id)
+        customChains = customChains.filter(c => c.id !== id)
+        saveCustomChains(customChains)
+        renderList()
       })
     })
   }

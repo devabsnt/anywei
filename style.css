@@ -1225,9 +1225,6 @@ footer {
   align-content: start;
   grid-auto-rows: 48px;
 }
-.db-canvas.db-freeform {
-  display: block;
-}
 .db-canvas-empty {
   position: absolute;
   inset: 0;
@@ -1391,6 +1388,17 @@ footer {
 }
 .chain-row span:first-child { min-width: 70px; }
 .chain-copyable:hover { color: var(--accent); }
+.chain-card-custom { border-color: var(--accent-dim); }
+.chain-delete {
+  background: none;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  margin-left: auto;
+}
+.chain-delete:hover { color: var(--error); }
 
 /* ── Trace Viewer ─────────────────────────────────────────── */
 .trace-params {

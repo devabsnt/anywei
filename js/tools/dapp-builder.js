@@ -26,7 +26,7 @@ const FONT_MAP = {
 let state = {
   contract: { address: '', abi: null, chainId: 1 },
   theme: { mode: 'dark', primary: '#f59e0b', bg: '#0a0a0a', surface: '#141414', text: '#e5e5e5', radius: '4px' },
-  layout: 'grid',
+  layout: 'grid', // grid-only
   gridCols: 6,
   components: [],
   selected: null,
@@ -39,20 +39,12 @@ function findNextGridRow() {
   return maxRow + 1
 }
 
-function findNextFreeformY() {
-  if (state.components.length === 0) return 20
-  const maxBottom = Math.max(...state.components.map(c => (c.position.y || 0) + (c.position.height || 48) + 8))
-  return maxBottom
-}
-
 function addComponent(type, pos) {
   const def = COMPONENT_TYPES[type]
   const comp = {
     id: 'c' + state.nextId++,
     type,
-    position: state.layout === 'grid'
-      ? { col: pos?.col || 1, row: pos?.row || findNextGridRow(), width: type === 'heading' ? state.gridCols : 2, height: 1 }
-      : { x: pos?.x || 20, y: pos?.y || findNextFreeformY(), width: type === 'heading' ? 500 : 300, height: 48 },
+    position: { col: pos?.col || 1, row: pos?.row || findNextGridRow(), width: type === 'heading' ? state.gridCols : 2, height: 1 },
     props: { ...def.defaults },
     bindings: { onSuccess: [] },
     style: {},
@@ -97,10 +89,6 @@ export function render(container) {
           </div>
           <div class="db-target-section">
             <input type="text" id="db-target-addr" class="mono-input" placeholder="Target address (for export)" spellcheck="false" style="font-size:11px;width:240px" title="The address used in the exported frontend. Set this if using CREATE2 or deploying later.">
-          </div>
-          <div class="mode-tabs" style="margin:0">
-            <button class="mode-btn active" data-layout="grid">Grid</button>
-            <button class="mode-btn" data-layout="freeform">Freeform</button>
           </div>
           <select id="db-theme" class="mono-input" style="width:80px;font-size:11px">
             <option value="dark">Dark</option>
@@ -246,18 +234,6 @@ export function render(container) {
     renderProps()
   }
 
-  // ── Layout toggle ──
-  container.querySelectorAll('[data-layout]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      container.querySelectorAll('[data-layout]').forEach(b => b.classList.remove('active'))
-      btn.classList.add('active')
-      state.layout = btn.dataset.layout
-      canvas.classList.toggle('db-grid', state.layout === 'grid')
-      canvas.classList.toggle('db-freeform', state.layout === 'freeform')
-      renderCanvas()
-    })
-  })
-
   // ── Theme ──
   document.getElementById('db-theme').addEventListener('change', (e) => {
     state.theme.mode = e.target.value
@@ -283,13 +259,9 @@ export function render(container) {
     const rect = canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-    if (state.layout === 'grid') {
-      const col = Math.max(1, Math.ceil((x / rect.width) * state.gridCols))
-      const row = Math.max(1, Math.ceil(y / 50))
-      addComponent(type, { col, row })
-    } else {
-      addComponent(type, { x, y })
-    }
+    const col = Math.max(1, Math.ceil((x / rect.width) * state.gridCols))
+    const row = Math.max(1, Math.ceil(y / 50))
+    addComponent(type, { col, row })
     renderCanvas()
     renderProps()
   })
@@ -306,25 +278,15 @@ export function render(container) {
   // ── Canvas rendering ──
   function renderCanvas() {
     canvas.innerHTML = ''
-    if (state.layout === 'grid') {
-      canvas.style.gridTemplateColumns = `repeat(${state.gridCols}, 1fr)`
-    }
+    canvas.style.gridTemplateColumns = `repeat(${state.gridCols}, 1fr)`
 
     for (const comp of state.components) {
       const el = document.createElement('div')
       el.className = `db-comp ${state.selected === comp.id ? 'db-comp-selected' : ''}`
       el.dataset.id = comp.id
 
-      if (state.layout === 'grid') {
-        el.style.gridColumn = `${comp.position.col} / span ${comp.position.width}`
-        el.style.gridRow = `${comp.position.row} / span ${comp.position.height}`
-      } else {
-        el.style.position = 'absolute'
-        el.style.left = comp.position.x + 'px'
-        el.style.top = comp.position.y + 'px'
-        el.style.width = comp.position.width + 'px'
-        el.style.minHeight = comp.position.height + 'px'
-      }
+      el.style.gridColumn = `${comp.position.col} / span ${comp.position.width}`
+      el.style.gridRow = `${comp.position.row} / span ${comp.position.height}`
 
       const def = COMPONENT_TYPES[comp.type]
 
@@ -347,6 +309,7 @@ export function render(container) {
       el.style.cursor = 'move'
       el.addEventListener('mousedown', (e) => {
         if (e.target.classList.contains('db-comp-remove')) return
+        if (e.target.classList.contains('db-resize-handle')) return // handled separately
         e.preventDefault()
         didDrag = false
         state.selected = comp.id
@@ -356,48 +319,29 @@ export function render(container) {
         el.classList.add('db-comp-selected')
         renderProps()
 
-        if (state.layout === 'freeform') {
-          const startX = e.clientX, startY = e.clientY
-          const origX = comp.position.x, origY = comp.position.y
-          const onMove = (ev) => {
-            didDrag = true
-            comp.position.x = Math.max(0, origX + ev.clientX - startX)
-            comp.position.y = Math.max(0, origY + ev.clientY - startY)
-            el.style.left = comp.position.x + 'px'
-            el.style.top = comp.position.y + 'px'
+        const rect = canvas.getBoundingClientRect()
+        const cellW = rect.width / state.gridCols
+        const rowH = 56
+        const onMove = (ev) => {
+          didDrag = true
+          const x = ev.clientX - rect.left
+          const y = ev.clientY - rect.top
+          const newCol = Math.max(1, Math.min(state.gridCols - comp.position.width + 1, Math.ceil(x / cellW)))
+          const newRow = Math.max(1, Math.ceil(y / rowH))
+          if (newCol !== comp.position.col || newRow !== comp.position.row) {
+            comp.position.col = newCol
+            comp.position.row = newRow
+            el.style.gridColumn = `${newCol} / span ${comp.position.width}`
+            el.style.gridRow = `${newRow} / span ${comp.position.height}`
           }
-          const onUp = () => {
-            document.removeEventListener('mousemove', onMove)
-            document.removeEventListener('mouseup', onUp)
-            if (didDrag) renderProps()
-          }
-          document.addEventListener('mousemove', onMove)
-          document.addEventListener('mouseup', onUp)
-        } else {
-          const rect = canvas.getBoundingClientRect()
-          const cellW = rect.width / state.gridCols
-          const rowH = 56
-          const onMove = (ev) => {
-            didDrag = true
-            const x = ev.clientX - rect.left
-            const y = ev.clientY - rect.top
-            const newCol = Math.max(1, Math.min(state.gridCols - comp.position.width + 1, Math.ceil(x / cellW)))
-            const newRow = Math.max(1, Math.ceil(y / rowH))
-            if (newCol !== comp.position.col || newRow !== comp.position.row) {
-              comp.position.col = newCol
-              comp.position.row = newRow
-              el.style.gridColumn = `${newCol} / span ${comp.position.width}`
-              el.style.gridRow = `${newRow} / span ${comp.position.height}`
-            }
-          }
-          const onUp = () => {
-            document.removeEventListener('mousemove', onMove)
-            document.removeEventListener('mouseup', onUp)
-            if (didDrag) { renderCanvas(); renderProps() }
-          }
-          document.addEventListener('mousemove', onMove)
-          document.addEventListener('mouseup', onUp)
         }
+        const onUp = () => {
+          document.removeEventListener('mousemove', onMove)
+          document.removeEventListener('mouseup', onUp)
+          if (didDrag) { renderCanvas(); renderProps() }
+        }
+        document.addEventListener('mousemove', onMove)
+        document.addEventListener('mouseup', onUp)
       })
 
       // Remove button
@@ -411,39 +355,27 @@ export function render(container) {
         })
       }
 
-      // Resize handle (bottom-right corner)
+      // Resize handle — drag to change column span
       const resizeHandle = el.querySelector('.db-resize-handle')
       if (resizeHandle) {
         resizeHandle.addEventListener('mousedown', (e) => {
           e.stopPropagation()
           e.preventDefault()
-          const startX = e.clientX, startY = e.clientY
-
-          if (state.layout === 'freeform') {
-            const origW = comp.position.width
-            const origH = el.offsetHeight
-            const onMove = (ev) => {
-              comp.position.width = Math.max(80, origW + ev.clientX - startX)
-              el.style.width = comp.position.width + 'px'
+          const startX = e.clientX
+          const origWidth = comp.position.width
+          const rect = canvas.getBoundingClientRect()
+          const cellW = rect.width / state.gridCols
+          const onMove = (ev) => {
+            const deltaCols = Math.round((ev.clientX - startX) / cellW)
+            const newWidth = Math.max(1, Math.min(state.gridCols - comp.position.col + 1, origWidth + deltaCols))
+            if (newWidth !== comp.position.width) {
+              comp.position.width = newWidth
+              el.style.gridColumn = `${comp.position.col} / span ${newWidth}`
             }
-            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); renderProps() }
-            document.addEventListener('mousemove', onMove)
-            document.addEventListener('mouseup', onUp)
-          } else {
-            const rect = canvas.getBoundingClientRect()
-            const cellW = rect.width / state.gridCols
-            const onMove = (ev) => {
-              const deltaCols = Math.round((ev.clientX - startX) / cellW)
-              const newWidth = Math.max(1, Math.min(state.gridCols - comp.position.col + 1, comp.position.width + deltaCols))
-              if (newWidth !== comp.position.width) {
-                comp.position.width = newWidth
-                el.style.gridColumn = `${comp.position.col} / span ${newWidth}`
-              }
-            }
-            const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); renderCanvas(); renderProps() }
-            document.addEventListener('mousemove', onMove)
-            document.addEventListener('mouseup', onUp)
           }
+          const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); renderCanvas(); renderProps() }
+          document.addEventListener('mousemove', onMove)
+          document.addEventListener('mouseup', onUp)
         })
       }
 
@@ -618,15 +550,9 @@ export function render(container) {
 
     // Position
     html += '<div class="db-prop-section">Position</div>'
-    if (state.layout === 'grid') {
-      html += propInput('Column', 'pos_col', comp.position.col)
-      html += propInput('Row', 'pos_row', comp.position.row)
-      html += propInput('Width (cols)', 'pos_width', comp.position.width)
-    } else {
-      html += propInput('X', 'pos_x', comp.position.x)
-      html += propInput('Y', 'pos_y', comp.position.y)
-      html += propInput('Width', 'pos_width', comp.position.width)
-    }
+    html += propInput('Column', 'pos_col', comp.position.col)
+    html += propInput('Row', 'pos_row', comp.position.row)
+    html += propInput('Width (cols)', 'pos_width', comp.position.width)
 
     propsPanel.innerHTML = html
 
@@ -772,17 +698,9 @@ export function render(container) {
     }
 
     // Build layout CSS
-    let layoutCss = ''
-    if (state.layout === 'grid') {
-      layoutCss = `.dapp-canvas{display:grid;grid-template-columns:repeat(${state.gridCols},1fr);gap:12px;padding:20px;max-width:900px;margin:0 auto}`
-      for (const comp of state.components) {
-        layoutCss += `\n#${comp.id}{grid-column:${comp.position.col}/span ${comp.position.width};grid-row:${comp.position.row}/span ${comp.position.height}}`
-      }
-    } else {
-      layoutCss = `.dapp-canvas{position:relative;min-height:600px;max-width:900px;margin:0 auto;padding:20px}`
-      for (const comp of state.components) {
-        layoutCss += `\n#${comp.id}{position:absolute;left:${comp.position.x}px;top:${comp.position.y}px;width:${comp.position.width}px}`
-      }
+    let layoutCss = `.dapp-canvas{display:grid;grid-template-columns:repeat(${state.gridCols},1fr);gap:12px;padding:20px;max-width:900px;margin:0 auto}`
+    for (const comp of state.components) {
+      layoutCss += `\n#${comp.id}{grid-column:${comp.position.col}/span ${comp.position.width};grid-row:${comp.position.row}/span ${comp.position.height}}`
     }
 
     return `<!DOCTYPE html>
