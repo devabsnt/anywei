@@ -47,6 +47,10 @@ function getProof(layers, leafIndex) {
 }
 
 export function render(container) {
+  // Restore saved entries
+  let savedEntries = ''
+  try { savedEntries = localStorage.getItem('anywei_merkle_entries') || '' } catch {}
+
   container.innerHTML = `
     <div class="tool-header">
       <h2>Merkle Tree Generator</h2>
@@ -54,16 +58,38 @@ export function render(container) {
     </div>
     <div class="tool-body">
       <div class="input-group">
-        <label>Entries <span class="text-dim">(one per line: address,amount)</span></label>
-        <textarea id="mk-input" class="mono-input" rows="10" placeholder="0x1234...5678,1000000000000000000\n0xabcd...ef01,2000000000000000000" spellcheck="false"></textarea>
+        <label>Entries <span class="text-dim">(one per line: address,amount &mdash; or upload a CSV)</span></label>
+        <textarea id="mk-input" class="mono-input" rows="10" placeholder="0x1234...5678,1000000000000000000\n0xabcd...ef01,2000000000000000000" spellcheck="false">${esc(savedEntries)}</textarea>
       </div>
-      <div class="input-row" style="gap:8px">
+      <div class="input-row" style="gap:8px;align-items:center;flex-wrap:wrap">
         <button id="mk-generate" class="btn btn-primary">Generate Tree</button>
         <label class="ide-checkbox"><input type="checkbox" id="mk-address-only"> Address-only (no amounts)</label>
+        <label class="btn" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+          Upload CSV <input type="file" id="mk-file" accept=".csv,.txt" style="display:none">
+        </label>
       </div>
       <div id="mk-output" class="output-area"></div>
     </div>
   `
+
+  const mkInput = document.getElementById('mk-input')
+
+  // Save entries on change
+  mkInput.addEventListener('input', () => {
+    try { localStorage.setItem('anywei_merkle_entries', mkInput.value) } catch {}
+  })
+
+  // File upload
+  document.getElementById('mk-file').addEventListener('change', (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      mkInput.value = reader.result
+      try { localStorage.setItem('anywei_merkle_entries', mkInput.value) } catch {}
+    }
+    reader.readAsText(file)
+  })
 
   document.getElementById('mk-generate').addEventListener('click', generate)
 

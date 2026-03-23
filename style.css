@@ -20,6 +20,31 @@
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
+/* ── Light theme override ─────────────────────────────────── */
+.light-theme {
+  --bg: #ffffff;
+  --bg-surface: #f8f8f8;
+  --bg-hover: #f0f0f0;
+  --bg-input: #fff;
+  --border: #e0e0e0;
+  --border-focus: #bbb;
+  --text: #1a1a1a;
+  --text-dim: #666;
+  --text-bright: #000;
+  --accent: #d97706;
+  --accent-dim: #fef3c7;
+  --blue: #2563eb;
+  --purple: #7c3aed;
+}
+.light-theme .sidebar { background: #fafafa; }
+.light-theme .nav-section { color: #999; }
+.light-theme .nav-item { color: #666; }
+.light-theme .nav-item:hover { background: #f0f0f0; color: #333; }
+.light-theme .nav-item.active { color: var(--accent); background: #fff; }
+.light-theme .result-card { background: #fafafa; border-color: #e0e0e0; }
+.light-theme .cmd-modal { background: #fff; }
+.light-theme .cmd-item:hover { background: #f0f0f0; }
+
 /* ── Reset ────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 14px; }
@@ -259,6 +284,23 @@ select.mono-input { cursor: pointer; }
   font-size: 11px;
   color: var(--text-dim);
   margin-bottom: 8px;
+}
+
+.explain-box {
+  background: var(--accent-dim);
+  border-left: 3px solid var(--accent);
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--text-bright);
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.explain-inline {
+  color: var(--accent);
+  font-size: 10px;
+  font-family: var(--font-sans);
+  font-style: italic;
 }
 
 .fn-signature {
@@ -659,6 +701,25 @@ select.mono-input { cursor: pointer; }
 .term-dim { color: #858585; }
 .term-bright { color: #d4d4d4; font-weight: 600; }
 .term-severity { font-weight: 700; margin-right: 4px; }
+.term-gas { color: #4ade80; }
+
+/* Contract size bar */
+.size-bar {
+  display: inline-block;
+  width: 100px;
+  height: 6px;
+  background: #2a2a2a;
+  vertical-align: middle;
+  margin-right: 6px;
+  overflow: hidden;
+}
+.size-bar-fill {
+  height: 100%;
+  transition: width 0.3s;
+}
+.size-bar-fill.term-success { background: var(--success); }
+.size-bar-fill.term-warning { background: var(--warning); }
+.size-bar-fill.term-error { background: var(--error); }
 
 .term-artifact {
   padding: 8px 0;
@@ -1134,13 +1195,19 @@ select.mono-input { cursor: pointer; }
 
 /* ── Footer ───────────────────────────────────────────────── */
 footer {
-  padding: 8px 16px;
+  padding: 6px 16px;
   border-top: 1px solid var(--border);
   font-size: 11px;
   color: var(--text-dim);
   display: flex;
+  align-items: center;
   gap: 6px;
 }
+.footer-spacer { flex: 1; }
+.gas-ticker { display: flex; align-items: center; gap: 4px; }
+.gas-ticker-label { color: var(--text-dim); }
+.gas-ticker-value { color: var(--accent); font-family: var(--font-mono); font-weight: 600; }
+.header-right { display: flex; align-items: center; gap: 8px; }
 
 /* ── dApp Builder ─────────────────────────────────────────── */
 .db-layout {

@@ -375,6 +375,66 @@ function detectMagicNumbers(source, ast, findings) {
   })
 }
 
+// ── Gas Optimization Tips ────────────────────────────────────
+
+const GAS = 'gas'
+
+export function analyzeGasOptimizations(source) {
+  const tips = []
+  const lines = source.split('\n')
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const lineNum = i + 1
+
+    // > 0 for unsigned integers (costs more than != 0)
+    if (line.match(/>\s*0\b/) && !line.includes('int') && !line.includes('//')) {
+      tips.push({ line: lineNum, col: line.indexOf('> 0'), message: 'Use "!= 0" instead of "> 0" for unsigned integers — saves ~6 gas per comparison' })
+    }
+
+    // .length in for loop condition (re-read every iteration)
+    if (line.match(/for\s*\(/) && line.includes('.length')) {
+      tips.push({ line: lineNum, col: line.indexOf('.length'), message: 'Cache array.length before the loop — reading .length from storage every iteration costs extra gas' })
+    }
+
+    // i++ instead of ++i in for loops
+    if (line.match(/for\s*\(.*\bi\+\+/) && !line.includes('unchecked')) {
+      tips.push({ line: lineNum, col: line.indexOf('i++'), message: 'Use "++i" instead of "i++" — saves ~5 gas per iteration (no temp copy needed)' })
+    }
+
+    // string error messages in require (costs more gas to deploy)
+    const reqMatch = line.match(/require\s*\([^,]+,\s*"([^"]{20,})"/)
+    if (reqMatch) {
+      tips.push({ line: lineNum, col: line.indexOf(reqMatch[1]), message: `Long error string ("${reqMatch[1].slice(0, 20)}...") — consider a custom error to reduce deployment gas` })
+    }
+
+    // public instead of external (public copies calldata to memory)
+    if (line.match(/function\s+\w+\s*\([^)]*\)\s+(public)/) && !line.includes('override')) {
+      const col = line.indexOf('public')
+      tips.push({ line: lineNum, col, message: 'Use "external" instead of "public" if the function is not called internally — avoids copying calldata to memory' })
+    }
+
+    // bool storage (costs extra since EVM uses a full slot)
+    if (line.match(/^\s+bool\s+(public\s+)?[a-zA-Z]/) && !line.includes('//') && !line.includes('memory') && !line.includes('calldata')) {
+      tips.push({ line: lineNum, col: line.indexOf('bool'), message: 'Bool storage variables use a full 256-bit slot — consider packing with adjacent small types or using uint8' })
+    }
+
+    // Initialize variable to default (wastes gas: uint256 x = 0)
+    if (line.match(/uint\d*\s+\w+\s*=\s*0\s*;/) && !line.includes('//')) {
+      tips.push({ line: lineNum, col: line.indexOf('= 0'), message: 'Default initialization to 0 is unnecessary — Solidity defaults uint to 0, saves deployment gas' })
+    }
+
+    // memory instead of calldata for read-only params
+    if (line.match(/function\s+\w+.*\bmemory\b.*\bexternal\b/) || line.match(/function\s+\w+.*\bexternal\b.*\bmemory\b/)) {
+      if (line.includes('memory') && (line.includes('string') || line.includes('bytes') || line.includes('[]'))) {
+        tips.push({ line: lineNum, col: line.indexOf('memory'), message: 'Use "calldata" instead of "memory" for read-only external function parameters — avoids copying' })
+      }
+    }
+  }
+
+  return tips
+}
+
 // ── Helpers ──────────────────────────────────────────────────
 
 function hasExternalCall(node) {

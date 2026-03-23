@@ -23,10 +23,24 @@ const FONT_MAP = {
 
 // ── State ───────────────────────────────────────────────────
 
-let state = {
+const BUILDER_STATE_KEY = 'anywei_dapp_builder'
+
+function loadBuilderState() {
+  try {
+    const saved = localStorage.getItem(BUILDER_STATE_KEY)
+    if (saved) return JSON.parse(saved)
+  } catch {}
+  return null
+}
+
+function saveBuilderState() {
+  try { localStorage.setItem(BUILDER_STATE_KEY, JSON.stringify(state)) } catch {}
+}
+
+let state = loadBuilderState() || {
   contract: { address: '', abi: null, chainId: 1 },
   theme: { mode: 'dark', primary: '#f59e0b', bg: '#0a0a0a', surface: '#141414', text: '#e5e5e5', radius: '4px' },
-  layout: 'grid', // grid-only
+  layout: 'grid',
   gridCols: 6,
   components: [],
   selected: null,
@@ -51,6 +65,7 @@ function addComponent(type, pos) {
   }
   state.components.push(comp)
   state.selected = comp.id
+  saveBuilderState()
   return comp
 }
 
@@ -66,6 +81,7 @@ function removeComponent(id) {
     }
   }
   if (state.selected === id) state.selected = null
+  saveBuilderState()
 }
 
 function getComp(id) { return state.components.find(c => c.id === id) }
@@ -152,7 +168,7 @@ export function render(container) {
   // Populate IDE contracts dropdown
   function populateIdeContracts() {
     try {
-      const compiled = sessionStorage.getItem('anywei_compiled')
+      const compiled = localStorage.getItem('anywei_compiled')
       if (!compiled) { ideContractSelect.innerHTML = '<option value="">No compiled contracts</option>'; return }
       const arts = JSON.parse(compiled)
       const names = Object.keys(arts)
@@ -166,7 +182,7 @@ export function render(container) {
 
   // Auto-load first IDE contract on init
   try {
-    const compiled = sessionStorage.getItem('anywei_compiled')
+    const compiled = localStorage.getItem('anywei_compiled')
     if (compiled) {
       const arts = JSON.parse(compiled)
       const first = Object.values(arts)[0]
@@ -186,7 +202,7 @@ export function render(container) {
     const name = ideContractSelect.value
     if (!name) return
     try {
-      const arts = JSON.parse(sessionStorage.getItem('anywei_compiled'))
+      const arts = JSON.parse(localStorage.getItem('anywei_compiled'))
       const art = arts[name]
       if (art?.abi) {
         state.contract.abi = art.abi
@@ -242,6 +258,7 @@ export function render(container) {
     } else if (e.target.value === 'dark') {
       Object.assign(state.theme, { bg: '#0a0a0a', surface: '#141414', text: '#e5e5e5' })
     }
+    saveBuilderState()
   })
 
   // ── Drag from palette ──
@@ -277,6 +294,7 @@ export function render(container) {
 
   // ── Canvas rendering ──
   function renderCanvas() {
+    saveBuilderState()
     canvas.innerHTML = ''
     canvas.style.gridTemplateColumns = `repeat(${state.gridCols}, 1fr)`
 

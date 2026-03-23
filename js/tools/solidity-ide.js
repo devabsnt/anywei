@@ -1,5 +1,5 @@
 import { esc, saveState, loadState } from '../shared/formatters.js'
-import { analyzeSource } from '../shared/solidity-analyzer.js'
+import { analyzeSource, analyzeGasOptimizations } from '../shared/solidity-analyzer.js'
 import * as wallet from '../shared/wallet.js'
 import { encodeFunctionData, decodeFunctionResult } from 'viem'
 import { EditorView, basicSetup } from 'codemirror'
@@ -800,7 +800,8 @@ contract MyContract {
 
   // ── Wallet Connection (RainbowKit) ───────────────────────
 
-  let deployedContracts = [] // { name, address, abi }
+  let deployedContracts = []
+  try { deployedContracts = JSON.parse(localStorage.getItem('anywei_deployed')) || [] } catch {}
 
   // Mount RainbowKit into the toolbar
   wallet.mountWallet(document.getElementById('ide-wallet-mount'))
@@ -905,6 +906,7 @@ contract MyContract {
       const result = await wallet.deployContract({ bytecode: a.bytecode, abi: a.abi, constructorArgs: args })
 
       deployedContracts.push({ name, address: result.address, abi: a.abi })
+      try { localStorage.setItem('anywei_deployed', JSON.stringify(deployedContracts)) } catch {}
       appendTerminal('output', `<div class="term-line term-success">Deployed ${esc(name)} at ${result.address}</div>`)
       appendTerminal('output', `<div class="term-line term-dim">Tx: ${result.hash} | Gas: ${result.gasUsed.toString()}</div>`)
       renderDeploySection()
@@ -1178,6 +1180,18 @@ contract MyContract {
       }
     }
 
+    // Gas optimization tips
+    if (!fatalErrors.length) {
+      const gasTips = analyzeGasOptimizations(source)
+      if (gasTips.length > 0) {
+        problemsHtml += '<div class="term-line term-dim" style="margin-top:8px;border-bottom:1px solid #3c3c3c;padding-bottom:4px">GAS OPTIMIZATIONS</div>'
+        for (const tip of gasTips) {
+          problemsHtml += `<div class="term-line term-gas"><span class="term-severity">[GAS]</span> ${esc(tip.message)} <span class="term-dim">(line ${tip.line})</span></div>`
+        }
+        totalProblems += gasTips.length
+      }
+    }
+
     if (!problemsHtml) problemsHtml = '<div class="term-line term-success">No errors or warnings.</div>'
     setTerminal('problems', problemsHtml)
     updateProblemsCount(totalProblems)
@@ -1204,7 +1218,16 @@ contract MyContract {
         // Skip interfaces and abstract contracts (no bytecode = can't deploy)
         if (!bytecode || bytecode.length < 4) continue
         artifacts[name] = { contractName: name, abi, bytecode: '0x' + bytecode, deployedBytecode: '0x' + deployedBytecode }
-        appendTerminal('output', `<div class="term-line term-dim">${esc(name)}: ${abi.filter(e => e.type === 'function').length} functions, ${(bytecode.length / 2).toLocaleString()} bytes</div>`)
+
+        // Contract size monitor
+        const deployedSize = deployedBytecode ? deployedBytecode.length / 2 : 0
+        const sizeLimit = 24576 // 24KB EIP-170 limit
+        const sizePct = Math.min(100, (deployedSize / sizeLimit) * 100)
+        const sizeClass = sizePct > 90 ? 'term-error' : sizePct > 75 ? 'term-warning' : 'term-success'
+        const sizeBar = `<div class="size-bar"><div class="size-bar-fill ${sizeClass}" style="width:${sizePct}%"></div></div>`
+
+        appendTerminal('output', `<div class="term-line term-bright" style="margin-top:6px">${esc(name)}</div>`)
+        appendTerminal('output', `<div class="term-line">${sizeBar}<span class="text-dim" style="font-size:10px">${deployedSize.toLocaleString()} / ${sizeLimit.toLocaleString()} bytes (${sizePct.toFixed(1)}%)</span> <span class="${sizeClass}" style="font-size:10px">${sizePct > 90 ? 'NEAR LIMIT!' : sizePct > 75 ? 'Watch size' : 'OK'}</span></div>`)
         artHtml += `<div class="term-artifact">
           <div class="term-line term-bright">${esc(name)}</div>
           <div class="term-line term-dim">${abi.filter(e => e.type === 'function').length} functions &middot; ${abi.filter(e => e.type === 'event').length} events &middot; ${(bytecode.length / 2).toLocaleString()} bytes</div>
@@ -1221,7 +1244,7 @@ contract MyContract {
 
     lastArtifacts = artifacts
     setTerminal('artifacts', artHtml || '<div class="term-line term-dim">No artifacts.</div>')
-    try { sessionStorage.setItem('anywei_compiled', JSON.stringify(artifacts, (_, v) => typeof v === 'bigint' ? v.toString() : v)) } catch {}
+    try { localStorage.setItem('anywei_compiled', JSON.stringify(artifacts, (_, v) => typeof v === 'bigint' ? v.toString() : v)) } catch {}
 
     switchTab(totalProblems > 0 ? 'problems' : 'artifacts')
     renderArtifactList()

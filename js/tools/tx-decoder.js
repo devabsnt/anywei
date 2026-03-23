@@ -2,6 +2,7 @@ import { decodeFunctionData, decodeEventLog, parseAbi, formatEther, formatGwei }
 import { fetchAbi } from '../shared/abi-cache.js'
 import { lookupSelector, lookupEventTopic } from '../shared/etherscan.js'
 import { esc, copyBtn, etherscanLink, ensure0x } from '../shared/formatters.js'
+import { explainCall, explainEvent } from '../shared/explain.js'
 
 async function rpcCall(method, params) {
   const res = await fetch('/api/rpc', {
@@ -115,7 +116,8 @@ export function render(container) {
           const val = result.args[i]
           rows += `<tr><td class="text-dim">${esc(inp.name || `arg${i}`)}</td><td class="text-dim">${esc(inp.type)}</td><td class="mono" style="word-break:break-all">${formatVal(val)}</td></tr>`
         }
-        return `<div class="result-card"><div class="fn-signature"><span class="selector-badge">${esc(selector)}</span> <span class="text-purple">${esc(result.functionName)}</span></div><table class="params-table"><tbody>${rows}</tbody></table></div>`
+        const explanation = explainCall(result.functionName, result.args, inputs)
+        return `<div class="result-card">${explanation ? `<div class="explain-box">${esc(explanation)}</div>` : ''}<div class="fn-signature"><span class="selector-badge">${esc(selector)}</span> <span class="text-purple">${esc(result.functionName)}</span></div><table class="params-table"><tbody>${rows}</tbody></table></div>`
       } catch {}
     }
 
@@ -144,7 +146,9 @@ export function render(container) {
           const val = result.args ? (Array.isArray(result.args) ? result.args[i] : result.args[inp.name]) : null
           return `<span class="text-dim">${esc(inp.name)}</span>=<span class="mono">${formatVal(val)}</span>`
         }).join(', ')
-        return `<div class="tx-log"><span class="text-purple">${esc(result.eventName)}</span>(${params}) <span class="text-dim" style="font-size:10px">${log.address.slice(0, 10)}...</span></div>`
+        const argValues = Array.isArray(result.args) ? result.args : inputs.map(i => result.args?.[i.name])
+        const evtExplain = explainEvent(result.eventName, argValues, inputs)
+        return `<div class="tx-log"><span class="text-purple">${esc(result.eventName)}</span>(${params})${evtExplain ? ` <span class="explain-inline">${esc(evtExplain)}</span>` : ''} <span class="text-dim" style="font-size:10px">${log.address.slice(0, 10)}...</span></div>`
       } catch {}
     }
 

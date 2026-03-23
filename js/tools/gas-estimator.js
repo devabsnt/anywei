@@ -194,7 +194,7 @@ export function render(container) {
 
   // Check for artifact from IDE — auto-load if found
   try {
-    const fromIde = sessionStorage.getItem('anywei_compiled')
+    const fromIde = localStorage.getItem('anywei_compiled')
     if (fromIde) {
       const all = JSON.parse(fromIde)
       const first = Object.values(all)[0]

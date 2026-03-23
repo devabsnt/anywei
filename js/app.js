@@ -20,6 +20,8 @@ const TOOLS = [
   { id: 'contract-diff', path: '/diff', label: 'Diff', icon: '\u2260', keywords: 'diff compare contract abi bytecode' },
   { id: 'storage-slot', path: '/storage', label: 'Storage Slots', icon: '\u25A6', keywords: 'storage slot mapping keccak256 calculate' },
   { id: 'selector-lookup', path: '/selectors', label: 'Selectors', icon: '\u2318', keywords: 'selector signature lookup 4byte function event' },
+  { id: 'interface-checker', path: '/interface', label: 'Interface Check', icon: '\u2611', keywords: 'interface check implement erc20 erc721 erc1155' },
+  { id: 'proxy-inspector', path: '/proxy', label: 'Proxy Inspector', icon: '\u229B', keywords: 'proxy inspect eip1967 uups transparent beacon implementation' },
   // ── Utilities ──
   { id: 'unit-converter', path: '/convert', label: 'Convert', icon: '\u21C4', keywords: 'convert unit wei gwei ether hex decimal keccak address timestamp' },
   { id: 'merkle-tree', path: '/merkle', label: 'Merkle Tree', icon: '\u2042', keywords: 'merkle tree root proof airdrop allowlist whitelist' },
@@ -147,8 +149,32 @@ function init() {
     })
   })
 
+  // Theme toggle
+  const savedTheme = localStorage.getItem('anywei_theme') || 'dark'
+  if (savedTheme === 'light') document.documentElement.classList.add('light-theme')
+  const themeBtn = document.getElementById('theme-toggle')
+  themeBtn.textContent = savedTheme === 'light' ? '\u2600' : '\u263D'
+  themeBtn.addEventListener('click', () => {
+    const isLight = document.documentElement.classList.toggle('light-theme')
+    localStorage.setItem('anywei_theme', isLight ? 'light' : 'dark')
+    themeBtn.textContent = isLight ? '\u2600' : '\u263D'
+  })
+
+  // Live gas ticker
+  async function updateGasTicker() {
+    try {
+      const res = await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_gasPrice', params: [], id: 1 }) })
+      const data = await res.json()
+      if (data.result) {
+        const gwei = (Number(BigInt(data.result)) / 1e9).toFixed(1)
+        document.getElementById('gas-ticker').innerHTML = `<span class="gas-ticker-label">Gas:</span> <span class="gas-ticker-value">${gwei} gwei</span>`
+      }
+    } catch {}
+  }
+  updateGasTicker()
+  setInterval(updateGasTicker, 15000)
+
   // Command palette
-  document.getElementById('cmd-k-btn').addEventListener('click', openPalette)
   document.getElementById('cmd-palette').querySelector('.cmd-overlay').addEventListener('click', closePalette)
   document.getElementById('cmd-input').addEventListener('input', (e) => renderPaletteResults(e.target.value))
   document.getElementById('cmd-input').addEventListener('keydown', (e) => {
