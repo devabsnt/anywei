@@ -3,8 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Browser-based Solidity developer toolkit. Compile, deploy, test, decode, fuzz, and debug smart contracts. No setup required.">
+  <meta name="keywords" content="solidity, ethereum, evm, smart contract, developer tools, calldata decoder, abi explorer, bytecode disassembler, proxy inspector, security analyzer, gas estimator, fuzz testing, create2, eip-712, merkle tree">
+  <meta property="og:title" content="anywei; dev tools, zero setup">
+  <meta property="og:description" content="22+ Solidity tools in your browser. Compile, deploy, test, decode, and debug smart contracts without installing anything.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://anywei.dev">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="anywei; dev tools, zero setup">
+  <meta name="twitter:description" content="22+ Solidity tools in your browser. No setup required.">
   <title>anywei; dev tools, zero setup</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%E2%9A%92</text></svg>">
+  <link rel="canonical" href="https://anywei.dev">
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -22,76 +32,76 @@
       <nav id="sidebar" class="sidebar">
         <div class="nav-section">Build</div>
         <a href="/ide" data-tool="solidity-ide" class="nav-item active">
-          <span class="nav-icon">&#9998;</span> Solidity IDE
+          <span class="nav-icon">&#9998;</span><span class="nav-text">Solidity IDE<span class="nav-sub">Compile, deploy, security scan</span></span>
         </a>
         <a href="/builder" data-tool="dapp-builder" class="nav-item">
-          <span class="nav-icon">&#9640;</span> dApp Builder
+          <span class="nav-icon">&#9640;</span><span class="nav-text">dApp Builder<span class="nav-sub">Drag-and-drop contract frontend</span></span>
         </a>
         <a href="/test" data-tool="quick-test" class="nav-item">
-          <span class="nav-icon">&#10003;</span> Quick Test
+          <span class="nav-icon">&#10003;</span><span class="nav-text">Quick Test<span class="nav-sub">Fuzz, boundary tests, opcode trace</span></span>
         </a>
         <a href="/gas" data-tool="gas-estimator" class="nav-item">
-          <span class="nav-icon">&#916;</span> Gas
+          <span class="nav-icon">&#916;</span><span class="nav-text">Gas<span class="nav-sub">Estimate costs from history or local EVM</span></span>
         </a>
 
         <div class="nav-section">Decode</div>
         <a href="/calldata" data-tool="calldata-decoder" class="nav-item">
-          <span class="nav-icon">&#10547;</span> Calldata
+          <span class="nav-icon">&#10547;</span><span class="nav-text">Calldata<span class="nav-sub">Decode raw transaction input</span></span>
         </a>
         <a href="/encode" data-tool="calldata-encoder" class="nav-item">
-          <span class="nav-icon">&#10548;</span> Encode
+          <span class="nav-icon">&#10548;</span><span class="nav-text">Encode<span class="nav-sub">Build calldata from signature + params</span></span>
         </a>
         <a href="/tx" data-tool="tx-decoder" class="nav-item">
-          <span class="nav-icon">&#11146;</span> Transaction
+          <span class="nav-icon">&#11146;</span><span class="nav-text">Transaction<span class="nav-sub">Full tx breakdown from hash</span></span>
         </a>
         <a href="/events" data-tool="event-decoder" class="nav-item">
-          <span class="nav-icon">&#9881;</span> Events
+          <span class="nav-icon">&#9881;</span><span class="nav-text">Events<span class="nav-sub">Decode log topics + data</span></span>
         </a>
         <a href="/errors" data-tool="error-decoder" class="nav-item">
-          <span class="nav-icon">&#9888;</span> Errors
+          <span class="nav-icon">&#9888;</span><span class="nav-text">Errors<span class="nav-sub">Decode reverts and panic codes</span></span>
         </a>
 
         <div class="nav-section">Inspect</div>
         <a href="/abi" data-tool="abi-explorer" class="nav-item">
-          <span class="nav-icon">&#9776;</span> ABI Explorer
+          <span class="nav-icon">&#9776;</span><span class="nav-text">ABI Explorer<span class="nav-sub">Browse functions, events, selectors</span></span>
         </a>
         <a href="/bytecode" data-tool="bytecode-disassembler" class="nav-item">
-          <span class="nav-icon">&#9000;</span> Bytecode
+          <span class="nav-icon">&#9000;</span><span class="nav-text">Bytecode<span class="nav-sub">Disassemble to opcodes</span></span>
         </a>
         <a href="/diff" data-tool="contract-diff" class="nav-item">
-          <span class="nav-icon">&#8800;</span> Diff
+          <span class="nav-icon">&#8800;</span><span class="nav-text">Diff<span class="nav-sub">Compare ABIs or bytecodes</span></span>
         </a>
         <a href="/storage" data-tool="storage-slot" class="nav-item">
-          <span class="nav-icon">&#9638;</span> Storage Slots
+          <span class="nav-icon">&#9638;</span><span class="nav-text">Storage Slots<span class="nav-sub">Calculate and read slot positions</span></span>
         </a>
         <a href="/selectors" data-tool="selector-lookup" class="nav-item">
-          <span class="nav-icon">&#8984;</span> Selectors
+          <span class="nav-icon">&#8984;</span><span class="nav-text">Selectors<span class="nav-sub">Look up or compute 4-byte selectors</span></span>
         </a>
         <a href="/interface" data-tool="interface-checker" class="nav-item">
-          <span class="nav-icon">&#9745;</span> Interface
+          <span class="nav-icon">&#9745;</span><span class="nav-text">Interface<span class="nav-sub">Check ERC20/721/1155 compliance</span></span>
         </a>
         <a href="/proxy" data-tool="proxy-inspector" class="nav-item">
-          <span class="nav-icon">&#8859;</span> Proxy
+          <span class="nav-icon">&#8859;</span><span class="nav-text">Proxy<span class="nav-sub">Detect proxy pattern + implementation</span></span>
         </a>
 
         <div class="nav-section">Utilities</div>
         <a href="/convert" data-tool="unit-converter" class="nav-item">
-          <span class="nav-icon">&#8644;</span> Convert
+          <span class="nav-icon">&#8644;</span><span class="nav-text">Convert<span class="nav-sub">Wei, hex, keccak, timestamps</span></span>
         </a>
         <a href="/merkle" data-tool="merkle-tree" class="nav-item">
-          <span class="nav-icon">&#8258;</span> Merkle Tree
+          <span class="nav-icon">&#8258;</span><span class="nav-text">Merkle Tree<span class="nav-sub">Generate roots and proofs for airdrops</span></span>
         </a>
         <a href="/create2" data-tool="create2-calc" class="nav-item">
-          <span class="nav-icon">&#8982;</span> CREATE2
+          <span class="nav-icon">&#8982;</span><span class="nav-text">CREATE2<span class="nav-sub">Predict deterministic deploy address</span></span>
         </a>
         <a href="/eip712" data-tool="eip712-signer" class="nav-item">
-          <span class="nav-icon">&#10002;</span> EIP-712
+          <span class="nav-icon">&#10002;</span><span class="nav-text">EIP-712<span class="nav-sub">Sign and verify typed data</span></span>
         </a>
         <a href="/multicall" data-tool="multicall-builder" class="nav-item">
-          <span class="nav-icon">&#8801;</span> Multicall
+          <span class="nav-icon">&#8801;</span><span class="nav-text">Multicall<span class="nav-sub">Batch multiple calls into one</span></span>
         </a>
         <a href="/chains" data-tool="chain-reference" class="nav-item">
-          <span class="nav-icon">&#9939;</span> Chains
+          <span class="nav-icon">&#9939;</span><span class="nav-text">Chains<span class="nav-sub">Chain IDs, RPCs, explorers</span></span>
         </a>
       </nav>
 
