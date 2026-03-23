@@ -48,11 +48,11 @@
 /* ── Background watermark ─────────────────────────────────── */
 .bg-eth {
   position: fixed;
-  right: -180px;
+  right: 0;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) translateX(55%);
   font-family: var(--font-mono);
-  font-size: 6px;
+  font-size: 7px;
   line-height: 1.15;
   color: #1a1a1a;
   pointer-events: none;
@@ -61,6 +61,7 @@
   white-space: pre;
   margin: 0;
   padding: 0;
+  overflow: hidden;
 }
 .light-theme .bg-eth { color: #eee; }
 
