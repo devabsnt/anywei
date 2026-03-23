@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>anywei - Solidity Developer Toolkit</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%E2%9A%92</text></svg>">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="header-left">
+        <h1>anywei <span class="icon">&#9874;</span></h1>
+      </div>
+      <button id="cmd-k-btn" class="cmd-k-btn" title="Cmd+K"><span class="kbd">&#8984;K</span></button>
+    </header>
+
+    <div class="layout">
+      <nav id="sidebar" class="sidebar">
+        <a href="/ide" data-tool="solidity-ide" class="nav-item active">
+          <span class="nav-icon">&#9998;</span> Solidity IDE
+        </a>
+        <a href="/calldata" data-tool="calldata-decoder" class="nav-item">
+          <span class="nav-icon">&#10547;</span> Decode Calldata
+        </a>
+        <a href="/encode" data-tool="calldata-encoder" class="nav-item">
+          <span class="nav-icon">&#10548;</span> Encode Calldata
+        </a>
+        <a href="/events" data-tool="event-decoder" class="nav-item">
+          <span class="nav-icon">&#9881;</span> Decode Events
+        </a>
+        <a href="/errors" data-tool="error-decoder" class="nav-item">
+          <span class="nav-icon">&#9888;</span> Decode Errors
+        </a>
+        <a href="/storage" data-tool="storage-slot" class="nav-item">
+          <span class="nav-icon">&#9638;</span> Storage Slots
+        </a>
+        <a href="/selectors" data-tool="selector-lookup" class="nav-item">
+          <span class="nav-icon">&#8984;</span> Selectors
+        </a>
+        <a href="/convert" data-tool="unit-converter" class="nav-item">
+          <span class="nav-icon">&#8644;</span> Convert
+        </a>
+        <a href="/abi" data-tool="abi-explorer" class="nav-item">
+          <span class="nav-icon">&#9776;</span> ABI Explorer
+        </a>
+        <a href="/bytecode" data-tool="bytecode-disassembler" class="nav-item">
+          <span class="nav-icon">&#9000;</span> Bytecode
+        </a>
+        <a href="/diff" data-tool="contract-diff" class="nav-item">
+          <span class="nav-icon">&#8800;</span> Diff
+        </a>
+        <a href="/gas" data-tool="gas-estimator" class="nav-item">
+          <span class="nav-icon">&#916;</span> Gas
+        </a>
+        <a href="/test" data-tool="quick-test" class="nav-item">
+          <span class="nav-icon">&#10003;</span> Quick Test
+        </a>
+        <a href="/tx" data-tool="tx-decoder" class="nav-item">
+          <span class="nav-icon">&#11146;</span> Decode Tx
+        </a>
+        <a href="/merkle" data-tool="merkle-tree" class="nav-item">
+          <span class="nav-icon">&#8258;</span> Merkle Tree
+        </a>
+        <a href="/create2" data-tool="create2-calc" class="nav-item">
+          <span class="nav-icon">&#8982;</span> CREATE2
+        </a>
+        <a href="/eip712" data-tool="eip712-signer" class="nav-item">
+          <span class="nav-icon">&#9997;</span> EIP-712
+        </a>
+        <a href="/multicall" data-tool="multicall-builder" class="nav-item">
+          <span class="nav-icon">&#8801;</span> Multicall
+        </a>
+        <a href="/chains" data-tool="chain-reference" class="nav-item">
+          <span class="nav-icon">&#9939;</span> Chains
+        </a>
+      </nav>
+
+      <main id="tool-area" class="tool-area">
+        <div class="tool-loading">Select a tool to get started</div>
+      </main>
+    </div>
+
+    <footer>
+      <span>anywei.dev</span>
+      <span class="separator">&#183;</span>
+      <span>all processing happens in your browser</span>
+    </footer>
+  </div>
+
+  <!-- Command palette modal -->
+  <div id="cmd-palette" class="cmd-palette hidden">
+    <div class="cmd-overlay"></div>
+    <div class="cmd-modal">
+      <input type="text" id="cmd-input" class="cmd-input" placeholder="Search tools..." autocomplete="off" spellcheck="false">
+      <div id="cmd-results" class="cmd-results"></div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
