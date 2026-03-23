@@ -74,10 +74,12 @@ No installs. No accounts. No wallet required (until you want to deploy). Just op
 
 - **Dark/light theme** toggle (default dark, persists across sessions)
 - **Live gas ticker** in the footer showing current mainnet gas price
-- **Command palette** (Ctrl+K) with fuzzy search and auto-detection of pasted data
+- **Command palette** (press `/` or `Ctrl+K`) with fuzzy search, number keys 1-9 for quick selection, and auto-detection of pasted addresses/hashes/calldata
+- **Keyboard navigation** for the sidebar (Left arrow to enter, Up/Down to browse, Right/Enter to select)
 - **URL routing** with query param support for deep links
 - **Session persistence** for files, artifacts, deployed contracts, and builder state
 - **Mobile responsive** with icon-only nav bar on small screens
+- **Per-tool SEO** with unique page titles and meta descriptions for each tool
 
 ## Stack
 

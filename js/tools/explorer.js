@@ -25,13 +25,18 @@ export function render(container, queryParams = {}) {
         <input type="text" id="exp-input" class="mono-input" placeholder="0x address or transaction hash" spellcheck="false" style="font-size:14px;padding:12px">
       </div>
       <div id="exp-output" class="output-area"></div>
+      <div id="exp-modal" class="exp-modal hidden">
+        <div class="exp-modal-overlay" id="exp-modal-overlay"></div>
+        <div class="exp-modal-content" id="exp-modal-content"></div>
+      </div>
     </div>
   `
 
   const input = document.getElementById('exp-input')
   const output = document.getElementById('exp-output')
-  let history = []
-  let historyIdx = -1
+  const modal = document.getElementById('exp-modal')
+  const modalOverlay = document.getElementById('exp-modal-overlay')
+  const modalContent = document.getElementById('exp-modal-content')
 
   if (queryParams.q) {
     input.value = queryParams.q
@@ -41,25 +46,47 @@ export function render(container, queryParams = {}) {
   input.addEventListener('change', () => lookup(input.value.trim()))
   input.addEventListener('paste', () => setTimeout(() => lookup(input.value.trim()), 50))
 
-  // Clicking addresses/hashes within results navigates
+  // Close modal on overlay click or Escape
+  modalOverlay.addEventListener('click', closeModal)
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal() })
+
+  function closeModal() { modal.classList.add('hidden'); modalContent.innerHTML = '' }
+
+  function openTxModal(hash) {
+    modal.classList.remove('hidden')
+    modalContent.innerHTML = '<div class="loading">Loading transaction...</div>'
+    renderTx(hash, modalContent)
+  }
+
+  // Clicking addresses navigates main view, tx hashes open modal
   output.addEventListener('click', (e) => {
     const link = e.target.closest('.exp-link')
     if (!link) return
     e.preventDefault()
     const val = link.dataset.value
+    if (val.length === 66) { openTxModal(val); return }
+    input.value = val
+    lookup(val)
+  })
+
+  // Clicking inside modal: addresses close modal and navigate, tx hashes open new modal
+  modalContent.addEventListener('click', (e) => {
+    const link = e.target.closest('.exp-link')
+    if (!link) return
+    e.preventDefault()
+    const val = link.dataset.value
+    if (val.length === 66) { openTxModal(val); return }
+    closeModal()
     input.value = val
     lookup(val)
   })
 
   function lookup(val) {
     if (!val || !val.startsWith('0x')) return
-    // Push to history for back/forward
-    history.push(val)
-    historyIdx = history.length - 1
     window.history.replaceState(null, '', `/explorer?q=${val}`)
 
     if (val.length === 42) renderAddress(val)
-    else if (val.length === 66) renderTx(val)
+    else if (val.length === 66) openTxModal(val)
     else output.innerHTML = '<div class="result-card text-dim">Paste a 42-character address or 66-character tx hash</div>'
   }
 
@@ -154,8 +181,9 @@ export function render(container, queryParams = {}) {
 
   // ── Transaction View ────────────────────────────────────
 
-  async function renderTx(hash) {
-    output.innerHTML = '<div class="loading">Fetching transaction...</div>'
+  async function renderTx(hash, target) {
+    const el = target || output
+    el.innerHTML = '<div class="loading">Fetching transaction...</div>'
 
     try {
       const [tx, receipt] = await Promise.all([
@@ -163,7 +191,7 @@ export function render(container, queryParams = {}) {
         rpcCall('eth_getTransactionReceipt', [hash])
       ])
 
-      if (!tx) { output.innerHTML = '<div class="result-card error">Transaction not found</div>'; return }
+      if (!tx) { el.innerHTML = '<div class="result-card error">Transaction not found</div>'; return }
 
       const gasUsed = receipt ? parseInt(receipt.gasUsed, 16) : 0
       const gasPrice = parseInt(tx.gasPrice || '0x0', 16)
@@ -209,9 +237,9 @@ export function render(container, queryParams = {}) {
         html += `<div class="result-card"><div class="text-dim">Contract deployed at:</div><a href="#" class="exp-link mono text-blue" data-value="${esc(receipt.contractAddress)}">${esc(receipt.contractAddress)}</a></div>`
       }
 
-      output.innerHTML = html
+      el.innerHTML = html
     } catch (e) {
-      output.innerHTML = `<div class="result-card error">${esc(e.message)}</div>`
+      el.innerHTML = `<div class="result-card error">${esc(e.message)}</div>`
     }
   }
 
