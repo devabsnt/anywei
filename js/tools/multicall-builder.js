@@ -3,10 +3,20 @@ import { fetchAbi } from '../shared/abi-cache.js'
 import { esc, copyBtn, ensure0x } from '../shared/formatters.js'
 
 const MULTICALL3 = '0xcA11bde05977b3631167028862bE2a173976CA11'
-const MULTICALL3_ABI = parseAbi([
-  'function aggregate3(tuple(address target, bool allowFailure, bytes callData)[] calls) payable returns (tuple(bool success, bytes returnData)[])',
-  'function aggregate3Value(tuple(address target, bool allowFailure, uint256 value, bytes callData)[] calls) payable returns (tuple(bool success, bytes returnData)[])'
-])
+const MULTICALL3_ABI = [
+  {
+    type: 'function', name: 'aggregate3', stateMutability: 'payable',
+    inputs: [{ name: 'calls', type: 'tuple[]', components: [
+      { name: 'target', type: 'address' },
+      { name: 'allowFailure', type: 'bool' },
+      { name: 'callData', type: 'bytes' }
+    ]}],
+    outputs: [{ name: '', type: 'tuple[]', components: [
+      { name: 'success', type: 'bool' },
+      { name: 'returnData', type: 'bytes' }
+    ]}]
+  }
+]
 
 export function render(container) {
   container.innerHTML = `

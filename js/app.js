@@ -16,7 +16,7 @@ const TOOLS = [
   { id: 'tx-decoder', path: '/tx', label: 'Decode Tx', icon: '\u2B8A', keywords: 'transaction decode hash receipt events' },
   { id: 'merkle-tree', path: '/merkle', label: 'Merkle Tree', icon: '\u2042', keywords: 'merkle tree root proof airdrop allowlist whitelist' },
   { id: 'create2-calc', path: '/create2', label: 'CREATE2', icon: '\u2316', keywords: 'create2 deterministic address deploy factory salt' },
-  { id: 'eip712-signer', path: '/eip712', label: 'EIP-712', icon: '\u270D', keywords: 'eip712 sign verify typed data signature permit' },
+  { id: 'eip712-signer', path: '/eip712', label: 'EIP-712', icon: '\u2712', keywords: 'eip712 sign verify typed data signature permit' },
   { id: 'multicall-builder', path: '/multicall', label: 'Multicall', icon: '\u2261', keywords: 'multicall batch aggregate calls multicall3' },
   { id: 'chain-reference', path: '/chains', label: 'Chains', icon: '\u26D3', keywords: 'chain id network rpc explorer reference' },
 ]
