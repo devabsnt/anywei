@@ -1460,7 +1460,7 @@ footer {
 .db-chain-icon { color: var(--accent); font-size: 11px; }
 .db-chain-svg { pointer-events: none; }
 
-/* ── Transaction Decoder ──────────────────────────────────── */
+/* ── Explorer ─────────────────────────────────────────────── */
 .tx-status {
   font-size: 14px;
   font-weight: 700;
@@ -1471,6 +1471,37 @@ footer {
   font-size: 12px;
   border-bottom: 1px solid #1a1a1a;
 }
+.exp-addr-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.exp-link { cursor: pointer; text-decoration: none; }
+.exp-link:hover { text-decoration: underline; }
+.exp-tx-list { max-height: 500px; overflow-y: auto; }
+.exp-tx-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 11px;
+  border-bottom: 1px solid #1a1a1a;
+  flex-wrap: wrap;
+}
+.exp-tx-hash { min-width: 90px; }
+.exp-tx-fn { min-width: 100px; }
+.exp-tx-peer { min-width: 120px; }
+.exp-tx-value { min-width: 80px; color: var(--text); }
+.exp-tx-gas { min-width: 70px; }
+.exp-tx-time { min-width: 70px; }
+.exp-dir {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border: 1px solid;
+}
+.exp-in { color: var(--success); border-color: var(--success); }
+.exp-out { color: var(--blue); border-color: var(--blue); }
 
 /* ── Merkle Tree ──────────────────────────────────────────── */
 .mk-proof {

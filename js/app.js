@@ -11,10 +11,10 @@ const TOOLS = [
   // ── Decode ──
   { id: 'calldata-decoder', path: '/calldata', label: 'Decode Calldata', icon: '\u2933', keywords: 'decode calldata transaction input data', seo: 'Decode Ethereum transaction calldata into readable function calls' },
   { id: 'calldata-encoder', path: '/encode', label: 'Encode Calldata', icon: '\u2934', keywords: 'encode calldata build transaction', seo: 'Encode Solidity function calls into raw calldata' },
-  { id: 'tx-decoder', path: '/tx', label: 'Decode Tx', icon: '\u2B8A', keywords: 'transaction decode hash receipt events', seo: 'Decode any Ethereum transaction by hash with events and gas breakdown' },
   { id: 'event-decoder', path: '/events', label: 'Decode Events', icon: '\u2699', keywords: 'decode event log topics', seo: 'Decode Ethereum event logs from topics and data' },
   { id: 'error-decoder', path: '/errors', label: 'Decode Errors', icon: '\u26A0', keywords: 'decode error revert panic', seo: 'Decode Solidity revert reasons and panic codes' },
   // ── Inspect ──
+  { id: 'explorer', path: '/explorer', label: 'Explorer', icon: '\u2315', keywords: 'explorer address transaction balance history account', seo: 'Explore Ethereum addresses and transactions with decoded calldata and events' },
   { id: 'abi-explorer', path: '/abi', label: 'ABI Explorer', icon: '\u2630', keywords: 'abi explorer contract functions events', seo: 'Explore smart contract ABIs with function selectors and proxy detection' },
   { id: 'bytecode-disassembler', path: '/bytecode', label: 'Bytecode', icon: '\u2328', keywords: 'bytecode disassemble opcode evm', seo: 'Disassemble EVM bytecode into readable opcodes' },
   { id: 'contract-diff', path: '/diff', label: 'Diff', icon: '\u2260', keywords: 'diff compare contract abi bytecode', seo: 'Compare smart contract ABIs and bytecodes side by side' },

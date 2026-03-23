@@ -34,13 +34,13 @@ No installs. No accounts. No wallet required (until you want to deploy). Just op
 
 **Calldata Encoder** - Enter a function signature or paste an ABI, fill in parameters (or hit "Fill Random"), and generate encoded calldata with a word-by-word breakdown.
 
-**Transaction Decoder** - Paste a transaction hash to see sender, receiver, value, gas, cost, status, decoded calldata, and all emitted events.
-
 **Event Log Decoder** - Paste event topics and data (or full JSON log) to decode event parameters with signature lookup.
 
 **Error / Revert Decoder** - Paste revert data to decode Error(string), Panic(uint256) with human-readable codes, and custom errors from an ABI.
 
 ### Inspect
+
+**Explorer** - Paste an address or transaction hash. Addresses show balance, nonce, contract info, and recent transactions with decoded function calls. Transaction hashes show full breakdown with decoded calldata and events. Click any address or hash within results to navigate, like a mini block explorer built into anywei.
 
 **ABI Explorer** - Paste a contract address or ABI JSON for a clean breakdown: constructor, write/read functions, events, errors with selectors, search/filter, proxy detection, and ABI download.
 
