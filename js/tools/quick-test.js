@@ -144,7 +144,7 @@ export function render(container, queryParams = {}) {
     </div>
     <div class="tool-body">
       <div class="input-group">
-        <label>Contract artifact <span class="text-dim">(paste Hardhat/Foundry JSON, or use "Open in Quick Test" from the IDE)</span></label>
+        <label>Contract artifact <span class="text-dim">(paste Hardhat/Foundry JSON, or use "Quick Test" from the IDE)</span></label>
         <textarea id="qt-input" class="mono-input" rows="4" placeholder='{"contractName":"...","abi":[...],"deployedBytecode":"0x..."}' spellcheck="false"></textarea>
         <div id="qt-load-status" class="status-line"></div>
       </div>

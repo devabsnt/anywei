@@ -1,3 +1,6 @@
+import { inject } from '@vercel/analytics'
+inject()
+
 // ── Tool registry ────────────────────────────────────────────
 const TOOLS = [
   // ── Build ──

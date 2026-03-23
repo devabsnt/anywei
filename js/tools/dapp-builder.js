@@ -232,35 +232,73 @@ export function render(container) {
       const def = COMPONENT_TYPES[comp.type]
       el.innerHTML = `<span class="db-comp-icon">${def.icon}</span> <span class="db-comp-label">${esc(comp.props.label || comp.props.text || comp.props.functionName || def.label)}</span><button class="db-comp-remove" data-id="${comp.id}">&times;</button>`
 
-      el.addEventListener('click', (e) => {
-        if (e.target.classList.contains('db-comp-remove')) {
-          removeComponent(comp.id)
-          renderCanvas()
-          renderProps()
-          return
-        }
-        state.selected = comp.id
-        renderCanvas()
-        renderProps()
-      })
+      // Track drag vs click
+      let didDrag = false
 
-      // Freeform drag to reposition
-      if (state.layout === 'freeform') {
-        el.style.cursor = 'move'
-        el.addEventListener('mousedown', (e) => {
-          if (e.target.classList.contains('db-comp-remove')) return
-          e.preventDefault()
+      el.style.cursor = 'move'
+      el.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('db-comp-remove')) return
+        e.preventDefault()
+        didDrag = false
+        state.selected = comp.id
+
+        // Update selection immediately without re-render
+        canvas.querySelectorAll('.db-comp').forEach(c => c.classList.remove('db-comp-selected'))
+        el.classList.add('db-comp-selected')
+        renderProps()
+
+        if (state.layout === 'freeform') {
           const startX = e.clientX, startY = e.clientY
           const origX = comp.position.x, origY = comp.position.y
           const onMove = (ev) => {
+            didDrag = true
             comp.position.x = Math.max(0, origX + ev.clientX - startX)
             comp.position.y = Math.max(0, origY + ev.clientY - startY)
             el.style.left = comp.position.x + 'px'
             el.style.top = comp.position.y + 'px'
           }
-          const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
+          const onUp = () => {
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('mouseup', onUp)
+            if (didDrag) renderProps()
+          }
           document.addEventListener('mousemove', onMove)
           document.addEventListener('mouseup', onUp)
+        } else {
+          const rect = canvas.getBoundingClientRect()
+          const cellW = rect.width / state.gridCols
+          const rowH = 56
+          const onMove = (ev) => {
+            didDrag = true
+            const x = ev.clientX - rect.left
+            const y = ev.clientY - rect.top
+            const newCol = Math.max(1, Math.min(state.gridCols - comp.position.width + 1, Math.ceil(x / cellW)))
+            const newRow = Math.max(1, Math.ceil(y / rowH))
+            if (newCol !== comp.position.col || newRow !== comp.position.row) {
+              comp.position.col = newCol
+              comp.position.row = newRow
+              el.style.gridColumn = `${newCol} / span ${comp.position.width}`
+              el.style.gridRow = `${newRow} / span ${comp.position.height}`
+            }
+          }
+          const onUp = () => {
+            document.removeEventListener('mousemove', onMove)
+            document.removeEventListener('mouseup', onUp)
+            if (didDrag) { renderCanvas(); renderProps() }
+          }
+          document.addEventListener('mousemove', onMove)
+          document.addEventListener('mouseup', onUp)
+        }
+      })
+
+      // Remove button
+      const removeBtn = el.querySelector('.db-comp-remove')
+      if (removeBtn) {
+        removeBtn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          removeComponent(comp.id)
+          renderCanvas()
+          renderProps()
         })
       }
 
@@ -271,6 +309,18 @@ export function render(container) {
       canvas.innerHTML = '<div class="db-canvas-empty">Drag components here or click them in the palette</div>'
     }
   }
+
+  // Delete key removes selected component
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Delete' || e.key === 'Backspace') && state.selected) {
+      // Don't delete if user is typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return
+      e.preventDefault()
+      removeComponent(state.selected)
+      renderCanvas()
+      renderProps()
+    }
+  })
 
   // ── Properties panel ──
   function renderProps() {
