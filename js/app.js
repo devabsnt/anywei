@@ -277,6 +277,9 @@ function init() {
     navigateTo(getToolFromPath())
   })
 
+  // Load background ASCII watermark
+  fetch('/ascii.txt').then(r => r.text()).then(t => { document.getElementById('bg-eth').textContent = t }).catch(() => {})
+
   // Initial load
   navigateTo(getToolFromPath())
 }
