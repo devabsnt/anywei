@@ -61,9 +61,10 @@ a:hover { text-decoration: underline; }
 #app {
   max-width: 1200px;
   margin: 0 auto;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 header {
@@ -99,6 +100,7 @@ header .icon { font-size: 14px; }
   grid-template-columns: 180px 1fr;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 /* ── Sidebar ──────────────────────────────────────────────── */
@@ -138,9 +140,9 @@ header .icon { font-size: 14px; }
   font-family: var(--font-sans);
   line-height: 1.2;
   margin-top: 1px;
+  display: none;
 }
-.nav-item:hover .nav-sub { color: #777; }
-.nav-item.active .nav-sub { color: var(--accent-dim); }
+.nav-item.active .nav-sub { display: block; color: var(--accent-dim); }
 .nav-item:hover {
   color: var(--text);
   background: var(--bg-hover);
@@ -157,7 +159,7 @@ header .icon { font-size: 14px; }
 .tool-area {
   padding: 20px 32px 20px 28px;
   overflow-y: auto;
-  max-height: calc(100vh - 90px);
+  height: 100%;
 }
 
 .tool-header h2 {
@@ -635,14 +637,15 @@ select.mono-input { cursor: pointer; }
 /* ── IDE (VS Code Dark+ layout) ───────────────────────────── */
 .ide-fullwidth {
   padding: 0 !important;
-  max-height: calc(100vh - 90px) !important;
+  max-height: none !important;
+  height: 100% !important;
   overflow: hidden !important;
 }
 
 .ide-layout {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 90px);
+  height: 100%;
 }
 
 .ide-toolbar {
