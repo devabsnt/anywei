@@ -8,6 +8,7 @@ import { solidity } from '@replit/codemirror-lang-solidity'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { keymap } from '@codemirror/view'
 import { openSearchPanel } from '@codemirror/search'
+import { linter } from '@codemirror/lint'
 
 const SOLC_BASE = 'https://binaries.soliditylang.org/bin'
 const FILES_KEY = 'anywei_ide_files'
@@ -277,6 +278,44 @@ export function render(container, queryParams = {}) {
     run: () => { compile(); return true }
   }])
 
+  // Live linter — underlines gas optimizations and security issues as you type
+  const solidityLinter = linter((view) => {
+    const source = view.state.doc.toString()
+    const diagnostics = []
+
+    // Gas optimization tips
+    try {
+      const gasTips = analyzeGasOptimizations(source)
+      for (const tip of gasTips) {
+        const line = view.state.doc.line(tip.line)
+        const from = tip.col != null ? line.from + tip.col : line.from
+        const to = Math.min(from + 20, line.to) // underline ~20 chars
+        diagnostics.push({ from, to, severity: 'info', message: `Gas: ${tip.message}`, source: 'anywei' })
+      }
+    } catch {}
+
+    // Security findings (only critical and high — don't overwhelm)
+    try {
+      const findings = analyzeSource(source)
+      for (const f of findings) {
+        if (f.severity !== 'critical' && f.severity !== 'high') continue
+        if (!f.line || f.line < 1) continue
+        try {
+          const line = view.state.doc.line(f.line)
+          diagnostics.push({
+            from: line.from,
+            to: line.to,
+            severity: f.severity === 'critical' ? 'error' : 'warning',
+            message: `${f.title}: ${f.message}`,
+            source: 'anywei'
+          })
+        } catch {}
+      }
+    } catch {}
+
+    return diagnostics
+  }, { delay: 800 }) // 800ms debounce — doesn't lag while typing
+
   let editorView = new EditorView({
     state: EditorState.create({
       doc: files[activeFileName]?.content || DEFAULT_CODE,
@@ -285,6 +324,7 @@ export function render(container, queryParams = {}) {
         solidity,
         oneDark,
         compileKeymap,
+        solidityLinter,
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             files[activeFileName] = { content: update.state.doc.toString(), modified: Date.now() }
@@ -296,6 +336,12 @@ export function render(container, queryParams = {}) {
           '.cm-scroller': { fontFamily: "'Consolas', 'Courier New', monospace", lineHeight: '1.5' },
           '.cm-content': { padding: '10px 0' },
           '.cm-gutters': { minWidth: '48px' },
+          // Gas tips: green wavy underline
+          '.cm-lintRange-info': { backgroundImage: 'none', textDecoration: 'underline wavy #4ade80', textUnderlineOffset: '3px' },
+          // Security warnings: yellow underline
+          '.cm-lintRange-warning': { backgroundImage: 'none', textDecoration: 'underline wavy #f59e0b', textUnderlineOffset: '3px' },
+          // Security critical: red underline
+          '.cm-lintRange-error': { backgroundImage: 'none', textDecoration: 'underline wavy #ef4444', textUnderlineOffset: '3px' },
         }),
       ]
     }),
@@ -1177,18 +1223,6 @@ contract MyContract {
         }
       } else {
         problemsHtml += '<div class="term-line term-success" style="margin-top:8px">No security issues detected.</div>'
-      }
-    }
-
-    // Gas optimization tips
-    if (!fatalErrors.length) {
-      const gasTips = analyzeGasOptimizations(source)
-      if (gasTips.length > 0) {
-        problemsHtml += '<div class="term-line term-dim" style="margin-top:8px;border-bottom:1px solid #3c3c3c;padding-bottom:4px">GAS OPTIMIZATIONS</div>'
-        for (const tip of gasTips) {
-          problemsHtml += `<div class="term-line term-gas"><span class="term-severity">[GAS]</span> ${esc(tip.message)} <span class="term-dim">(line ${tip.line})</span></div>`
-        }
-        totalProblems += gasTips.length
       }
     }
 
