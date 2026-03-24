@@ -1810,21 +1810,34 @@ footer {
   /* Hide section headers on mobile */
   .nav-section { display: none; }
 
-  /* Icon-only nav items */
+  /* Icon-only nav items - fixed height, no expansion */
   .nav-item {
     white-space: nowrap;
     border-left: none;
     border-bottom: 2px solid transparent;
-    padding: 8px 12px;
-    font-size: 0; /* hide label text */
+    padding: 6px 10px;
+    font-size: 0;
     gap: 0;
     flex-shrink: 0;
+    align-items: center;
+    height: 32px;
   }
   .nav-icon {
-    font-size: 16px;
+    font-size: 14px;
+    font-family: var(--font-mono);
+    font-style: normal;
+    text-rendering: optimizeLegibility;
+    -webkit-text-size-adjust: none;
     width: auto;
   }
-  .nav-text, .nav-sub { display: none; }
+  /* Force text/symbol rendering, prevent coloured emoji */
+  .nav-icon {
+    font-family: 'Segoe UI Symbol', 'Noto Sans Symbols', 'Apple Symbols', var(--font-mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  .nav-text { display: none !important; }
+  .nav-sub { display: none !important; max-height: 0 !important; opacity: 0 !important; }
+  .nav-item.active .nav-sub { display: none !important; max-height: 0 !important; }
   .nav-item.active {
     border-left: none;
     border-bottom-color: var(--accent);
