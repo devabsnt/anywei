@@ -14,7 +14,7 @@ No installs. No accounts. No wallet required (until you want to deploy). Just op
 
 ### Build
 
-**Solidity IDE** - In-browser editor with CodeMirror syntax highlighting, solc compilation via Web Worker, `@openzeppelin` import resolution through jsDelivr, file manager, contract templates, terminal panel, find/replace, code formatting, shareable URLs, and wallet-based deployment to any EVM chain via RainbowKit. Live linting underlines security issues and gas optimizations as you type.
+**Solidity IDE** - In-browser editor with CodeMirror syntax highlighting, solc compilation via Web Worker, `@openzeppelin` import resolution through jsDelivr, file manager, contract templates, terminal panel, find/replace, code formatting, contract flattening, shareable URLs, and wallet-based deployment to any EVM chain via RainbowKit. Live linting underlines security issues and gas optimizations as you type.
 
 **dApp Builder** - Drag-and-drop frontend builder for contract interaction UIs. Load a contract from the IDE, a deployed address, or a predicted CREATE2 address. Drop components onto a grid canvas, chain them together with visual arrow connections, configure theming, and export as a standalone HTML file with ethers.js baked in.
 
@@ -28,6 +28,8 @@ No installs. No accounts. No wallet required (until you want to deploy). Just op
 
 **Contract Size Monitor** - After compilation, shows a progress bar for each contract against the 24KB EIP-170 limit. Green under 75%, yellow 75-90%, red over 90%.
 
+**Contract Flattener** - One-click in the IDE toolbar. Resolves all imports and concatenates into a single file with deduplicated pragmas and licenses. Ready for Etherscan verification.
+
 ### Decode
 
 **Calldata Decoder** - Paste raw transaction input data to see the decoded function call with named parameters. Auto-fetches ABIs, falls back to 4byte.directory and OpenChain.
@@ -40,7 +42,7 @@ No installs. No accounts. No wallet required (until you want to deploy). Just op
 
 ### Inspect
 
-**Explorer** - Paste an address or transaction hash. Addresses show balance, nonce, contract info, and recent transactions with decoded function calls. Transaction hashes show full breakdown with decoded calldata and events. Click any address or hash within results to navigate, like a mini block explorer built into anywei.
+**Explorer** - Paste an address or transaction hash. Addresses show balance, nonce, contract info, and recent transactions with decoded function calls. Transaction hashes open in a modal with full breakdown, decoded calldata, and events. Click any address or hash to navigate.
 
 **ABI Explorer** - Paste a contract address or ABI JSON for a clean breakdown: constructor, write/read functions, events, errors with selectors, search/filter, proxy detection, and ABI download.
 
@@ -70,16 +72,23 @@ No installs. No accounts. No wallet required (until you want to deploy). Just op
 
 **Chain Reference** - Reference cards for 22+ EVM chains and testnets with chain ID, currency, RPC URL, and block explorer. Add and save custom chains.
 
+**Event Monitor** - Watch contract events in real-time. Paste an address, select which events to monitor, and see them stream in as they happen. Runs in the background while you use other tools, with a persistent toast indicator.
+
+**Safe TX Builder** - Build transaction batches for Gnosis Safe. Select contracts and functions, fill params, and export the exact JSON payload the Safe web app expects. Supports batching multiple calls.
+
+**Vanity Address Miner** - Generate Ethereum addresses matching a custom pattern (starts with, ends with, or contains). Runs in a Web Worker in the background. Shows estimated difficulty, live speed, and blurred private keys. Continues mining while you use other tools.
+
 ## Features
 
 - **Dark/light theme** toggle (default dark, persists across sessions)
 - **Live gas ticker** in the footer showing current mainnet gas price
-- **Command palette** (press `/` or `Ctrl+K`) with fuzzy search, number keys 1-9 for quick selection, and auto-detection of pasted addresses/hashes/calldata
+- **Background tasks** with persistent toast notifications for Event Monitor and Vanity Miner
+- **Command palette** (press `/` or `Ctrl+K`) with fuzzy search, number keys 1-9 for quick selection, and auto-detection of pasted data
 - **Keyboard navigation** for the sidebar (Left arrow to enter, Up/Down to browse, Right/Enter to select)
 - **URL routing** with query param support for deep links
-- **Session persistence** for files, artifacts, deployed contracts, and builder state
+- **Session persistence** for files, artifacts, deployed contracts, builder state, and custom chains
 - **Mobile responsive** with icon-only nav bar on small screens
-- **Per-tool SEO** with unique page titles and meta descriptions for each tool
+- **Per-tool SEO** with unique page titles and meta descriptions
 
 ## Stack
 
@@ -90,7 +99,7 @@ No installs. No accounts. No wallet required (until you want to deploy). Just op
 - **@solidity-parser/parser** for AST-based security analysis
 - **RainbowKit + wagmi** for wallet connection and chain management
 - **solc** loaded from the official CDN in a Web Worker
-- **ethers.js** baked into dApp Builder exports
+- **ethers.js** baked into dApp Builder exports and Vanity Miner worker
 
 Each tool is lazy-loaded. Opening any tool does not load code for the others.
 

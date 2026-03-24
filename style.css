@@ -162,9 +162,16 @@ header .icon { font-size: 14px; }
   font-family: var(--font-sans);
   line-height: 1.2;
   margin-top: 1px;
-  display: none;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
 }
-.nav-item.active .nav-sub { display: block; color: var(--accent-dim); }
+.nav-item.active .nav-sub {
+  max-height: 20px;
+  opacity: 1;
+  color: var(--accent-dim);
+}
 .sidebar.keyboard-nav { box-shadow: inset -2px 0 0 var(--accent); }
 .sidebar.keyboard-nav .nav-item:focus { outline: none; background: var(--bg-hover); }
 .nav-item:hover {
@@ -181,13 +188,13 @@ header .icon { font-size: 14px; }
 
 /* ── Tool Area ────────────────────────────────────────────── */
 .tool-area {
-  padding: 20px 32px 20px 36px;
+  padding: 36px 32px 40px 36px;
   margin-left: 8px;
   overflow-y: auto;
   height: 100%;
 }
 /* IDE removes the gap since it's full-width */
-.tool-area:has(.ide-layout) { margin-left: 0; }
+.tool-area:has(.ide-layout) { margin-left: 0; padding: 0; }
 
 .tool-header h2 {
   font-size: 18px;
@@ -1697,6 +1704,43 @@ footer {
   padding: 1px 0;
   display: flex;
   gap: 8px;
+}
+
+/* ── Background Task Toasts ───────────────────────────────── */
+.bg-toasts {
+  position: fixed;
+  bottom: 36px;
+  right: 16px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+.bg-toast {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  animation: toast-in 0.3s;
+}
+.bg-toast-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Vanity Address Miner ─────────────────────────────────── */

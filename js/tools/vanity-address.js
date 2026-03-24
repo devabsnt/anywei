@@ -1,4 +1,14 @@
 import { esc, copyBtn } from '../shared/formatters.js'
+import { showToast, removeToast } from '../shared/toasts.js'
+
+// Global state so mining persists across tab switches
+let globalWorker = null
+let globalMatches = [] // { address, privateKey, checked, elapsed }
+let globalRunning = false
+let globalPattern = ''
+let globalMode = 'starts'
+let globalChecked = 0
+let globalRate = 0
 
 function createMinerWorker() {
   const code = `
@@ -100,7 +110,16 @@ export function render(container) {
   const difficultyEl = document.getElementById('va-difficulty')
   const results = document.getElementById('va-results')
 
-  let worker = null
+  // Restore state if mining was running
+  if (globalRunning) {
+    patternInput.value = globalPattern
+    modeSelect.value = globalMode
+    startBtn.classList.add('hidden')
+    stopBtn.classList.remove('hidden')
+    progress.innerHTML = `<span class="loading">${globalChecked.toLocaleString()} checked</span> <span class="text-dim">${globalRate.toLocaleString()} addr/s</span>`
+    // Restore cached matches
+    for (const m of globalMatches) renderMatch(m)
+  }
 
   // Show estimated difficulty as user types
   patternInput.addEventListener('input', () => {
@@ -119,78 +138,78 @@ export function render(container) {
   startBtn.addEventListener('click', start)
   stopBtn.addEventListener('click', stop)
 
+  function renderMatch(m) {
+    const card = document.createElement('div')
+    card.className = 'result-card va-match'
+    card.innerHTML = `
+      <div style="margin-bottom:6px"><span class="success" style="font-weight:600">Match found!</span> <span class="text-dim">(after ${m.checked.toLocaleString()} attempts, ${formatTime(m.elapsed / 1000)})</span></div>
+      <div class="input-group">
+        <label>Address</label>
+        <div class="mono text-blue va-addr" style="font-size:13px;word-break:break-all">${highlightPattern(m.address, globalPattern, globalMode)}</div>
+      </div>
+      <div class="input-group" style="margin-top:6px">
+        <label>Private Key <span class="text-dim">(click to reveal)</span></label>
+        <div class="mono va-key" style="font-size:11px;word-break:break-all;cursor:pointer;color:#555;filter:blur(4px);transition:filter 0.2s" data-key="${esc(m.privateKey)}">Click to reveal</div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <button class="btn-copy va-copy-addr" data-val="${esc(m.address)}">Copy Address</button>
+        <button class="btn-copy va-copy-key" data-val="${esc(m.privateKey)}">Copy Key</button>
+      </div>
+    `
+    results.prepend(card)
+    card.querySelector('.va-key').addEventListener('click', function() { this.textContent = this.dataset.key; this.style.filter = 'none'; this.style.color = 'var(--text)'; this.style.cursor = 'default' })
+    card.querySelector('.va-copy-addr').addEventListener('click', function() { navigator.clipboard.writeText(this.dataset.val); this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy Address', 1200) })
+    card.querySelector('.va-copy-key').addEventListener('click', function() { navigator.clipboard.writeText(this.dataset.val); this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy Key', 1200) })
+  }
+
   function start() {
     const pattern = patternInput.value.trim().toLowerCase()
     if (!pattern) return
     if (!/^[0-9a-f]+$/.test(pattern)) return
 
     if (pattern.length > 8) {
-      progress.innerHTML = '<span class="warning">Patterns longer than 8 chars may take extremely long. Consider a shorter pattern.</span>'
+      progress.innerHTML = '<span class="warning">Patterns longer than 8 chars may take extremely long.</span>'
     }
 
-    if (worker) worker.terminate()
-    worker = createMinerWorker()
+    if (globalWorker) globalWorker.terminate()
+    globalWorker = createMinerWorker()
+    globalPattern = pattern
+    globalMode = modeSelect.value
+    globalMatches = []
+    globalChecked = 0
+    globalRunning = true
     results.innerHTML = ''
     startBtn.classList.add('hidden')
     stopBtn.classList.remove('hidden')
+    showToast('vanity-miner', `Mining 0x${pattern}...`)
 
-    worker.onmessage = (e) => {
+    globalWorker.onmessage = (e) => {
       if (e.data.type === 'progress') {
-        const rate = e.data.rate
-        const elapsed = e.data.elapsed
-        progress.innerHTML = `<span class="loading">${e.data.checked.toLocaleString()} checked</span> <span class="text-dim">${rate.toLocaleString()} addr/s &middot; ${formatTime(elapsed / 1000)} elapsed</span>`
+        globalChecked = e.data.checked
+        globalRate = e.data.rate
+        const progressEl = document.getElementById('va-progress')
+        if (progressEl) progressEl.innerHTML = `<span class="loading">${e.data.checked.toLocaleString()} checked</span> <span class="text-dim">${e.data.rate.toLocaleString()} addr/s &middot; ${formatTime(e.data.elapsed / 1000)} elapsed</span>`
+        showToast('vanity-miner', `Mining: ${e.data.checked.toLocaleString()} checked (${e.data.rate}/s)`)
       }
 
       if (e.data.type === 'match') {
-        const card = document.createElement('div')
-        card.className = 'result-card va-match'
-        card.innerHTML = `
-          <div style="margin-bottom:6px"><span class="success" style="font-weight:600">Match found!</span> <span class="text-dim">(after ${e.data.checked.toLocaleString()} attempts, ${formatTime(e.data.elapsed / 1000)})</span></div>
-          <div class="input-group">
-            <label>Address</label>
-            <div class="mono text-blue va-addr" style="font-size:13px;word-break:break-all">${highlightPattern(e.data.address, pattern, modeSelect.value)}</div>
-          </div>
-          <div class="input-group" style="margin-top:6px">
-            <label>Private Key <span class="text-dim">(click to reveal)</span></label>
-            <div class="mono va-key" style="font-size:11px;word-break:break-all;cursor:pointer;color:#555;filter:blur(4px);transition:filter 0.2s" data-key="${esc(e.data.privateKey)}">Click to reveal</div>
-          </div>
-          <div style="margin-top:8px;display:flex;gap:6px">
-            <button class="btn-copy va-copy-addr" data-val="${esc(e.data.address)}">Copy Address</button>
-            <button class="btn-copy va-copy-key" data-val="${esc(e.data.privateKey)}">Copy Key</button>
-          </div>
-        `
-        results.prepend(card)
-
-        // Reveal on click
-        card.querySelector('.va-key').addEventListener('click', function() {
-          this.textContent = this.dataset.key
-          this.style.filter = 'none'
-          this.style.color = 'var(--text)'
-          this.style.cursor = 'default'
-        })
-
-        // Copy buttons
-        card.querySelector('.va-copy-addr').addEventListener('click', function() {
-          navigator.clipboard.writeText(this.dataset.val)
-          this.textContent = 'Copied!'
-          setTimeout(() => this.textContent = 'Copy Address', 1200)
-        })
-        card.querySelector('.va-copy-key').addEventListener('click', function() {
-          navigator.clipboard.writeText(this.dataset.val)
-          this.textContent = 'Copied!'
-          setTimeout(() => this.textContent = 'Copy Key', 1200)
-        })
+        const m = { address: e.data.address, privateKey: e.data.privateKey, checked: e.data.checked, elapsed: e.data.elapsed }
+        globalMatches.unshift(m)
+        renderMatch(m)
       }
     }
 
-    worker.postMessage({ type: 'start', pattern, mode: modeSelect.value })
+    globalWorker.postMessage({ type: 'start', pattern, mode: modeSelect.value })
   }
 
   function stop() {
-    if (worker) { worker.postMessage({ type: 'stop' }); worker.terminate(); worker = null }
+    if (globalWorker) { globalWorker.postMessage({ type: 'stop' }); globalWorker.terminate(); globalWorker = null }
+    globalRunning = false
     startBtn.classList.remove('hidden')
     stopBtn.classList.add('hidden')
-    progress.innerHTML = progress.innerHTML.replace('loading', 'text-dim') + ' <span class="text-dim">(stopped)</span>'
+    removeToast('vanity-miner')
+    const progressEl = document.getElementById('va-progress')
+    if (progressEl) progressEl.innerHTML = progressEl.innerHTML.replace('loading', 'text-dim') + ' <span class="text-dim">(stopped)</span>'
   }
 
   function highlightPattern(addr, pattern, mode) {

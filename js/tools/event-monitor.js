@@ -1,6 +1,17 @@
 import { decodeEventLog } from 'viem'
 import { fetchAbi } from '../shared/abi-cache.js'
 import { esc, etherscanLink, truncAddr } from '../shared/formatters.js'
+import { showToast, removeToast } from '../shared/toasts.js'
+
+// Persistent state survives tab switches
+const EM_STATE_KEY = 'anywei_event_monitor'
+let globalPolling = false
+let globalPollTimer = null
+let globalLastBlock = null
+let globalAddr = ''
+let globalAbi = null
+let globalSelectedEvents = new Set()
+let globalEntries = [] // cached event entries
 
 async function rpcCall(method, params) {
   const res = await fetch('/api/rpc', {
@@ -47,11 +58,20 @@ export function render(container) {
   const pollStatus = document.getElementById('em-poll-status')
   const feed = document.getElementById('em-feed')
 
-  let abi = null
-  let selectedEvents = new Set()
-  let polling = false
-  let pollTimer = null
-  let lastBlock = null
+  // Restore state if monitoring was running
+  if (globalAddr) addrInput.value = globalAddr
+  if (globalPolling) {
+    startBtn.classList.add('hidden')
+    stopBtn.classList.remove('hidden')
+    pollStatus.textContent = `Monitoring ${globalAddr.slice(0, 10)}... (block ${globalLastBlock?.toLocaleString() || '?'})`
+    // Restore cached entries
+    for (const html of globalEntries) {
+      const div = document.createElement('div')
+      div.className = 'em-entry'
+      div.innerHTML = html
+      feed.appendChild(div)
+    }
+  }
 
   document.getElementById('em-load').addEventListener('click', loadContract)
   addrInput.addEventListener('paste', () => setTimeout(loadContract, 50))
@@ -66,8 +86,8 @@ export function render(container) {
     try {
       const result = await fetchAbi(addr)
       if (!result.abi) { status.innerHTML = '<span class="error">Contract not verified</span>'; return }
-      abi = result.abi
-      const events = abi.filter(e => e.type === 'event')
+      globalAbi = result.abi
+      const events = globalAbi.filter(e => e.type === 'event')
       if (events.length === 0) { status.innerHTML = '<span class="error">No events in ABI</span>'; return }
 
       status.innerHTML = `<span class="success">${esc(result.contractName || 'Loaded')} - ${events.length} events</span>`
@@ -80,11 +100,11 @@ export function render(container) {
           return `<label class="em-event-check"><input type="checkbox" value="${esc(evt.name)}" checked> <span class="text-purple">${esc(evt.name)}</span> <span class="text-dim">(${(evt.inputs || []).map(i => i.type).join(', ')})</span></label>`
         }).join('')
 
-      selectedEvents = new Set(events.map(e => e.name))
+      globalSelectedEvents = new Set(events.map(e => e.name))
       filtersDiv.querySelectorAll('input[type="checkbox"]').forEach(cb => {
         cb.addEventListener('change', () => {
-          if (cb.checked) selectedEvents.add(cb.value)
-          else selectedEvents.delete(cb.value)
+          if (cb.checked) globalSelectedEvents.add(cb.value)
+          else globalSelectedEvents.delete(cb.value)
         })
       })
 
@@ -96,8 +116,10 @@ export function render(container) {
   }
 
   async function startMonitoring() {
-    if (polling) return
-    polling = true
+    if (globalPolling) return
+    globalPolling = true
+    globalAddr = addrInput.value.trim()
+    globalAbi = globalAbi // already set by loadContract
     startBtn.classList.add('hidden')
     stopBtn.classList.remove('hidden')
     feed.innerHTML = ''
@@ -105,59 +127,63 @@ export function render(container) {
     // Get current block as starting point
     try {
       const bn = await rpcCall('eth_blockNumber', [])
-      lastBlock = parseInt(bn, 16)
-      pollStatus.textContent = `Watching from block ${lastBlock.toLocaleString()}...`
+      globalLastBlock = parseInt(bn, 16)
+      pollStatus.textContent = `Watching from block ${globalLastBlock.toLocaleString()}...`
     } catch (e) {
       pollStatus.textContent = 'Error getting block number'
       stopMonitoring()
       return
     }
 
+    globalEntries = []
+    showToast('event-monitor', `Monitoring ${globalAddr.slice(0, 10)}...`)
     poll()
-    pollTimer = setInterval(poll, 12000) // ~1 block
+    globalPollTimer = setInterval(poll, 12000)
   }
 
   function stopMonitoring() {
-    polling = false
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
+    globalPolling = false
+    if (globalPollTimer) { clearInterval(globalPollTimer); globalPollTimer = null }
+    removeToast('event-monitor')
     startBtn.classList.remove('hidden')
     stopBtn.classList.add('hidden')
     pollStatus.textContent = 'Stopped'
   }
 
   async function poll() {
-    if (!polling) return
-    const addr = addrInput.value.trim()
+    if (!globalPolling) return
+    const addr = globalAddr
 
     try {
       const currentBlock = await rpcCall('eth_blockNumber', [])
       const current = parseInt(currentBlock, 16)
-      if (current <= lastBlock) return
+      if (current <= globalLastBlock) return
 
-      pollStatus.textContent = `Polling block ${(lastBlock + 1).toLocaleString()} to ${current.toLocaleString()}...`
+      const ps = document.getElementById('em-poll-status')
+      if (ps) ps.textContent = `Polling block ${(globalLastBlock + 1).toLocaleString()} to ${current.toLocaleString()}...`
+      showToast('event-monitor', `Events: block ${current.toLocaleString()}`)
 
-      // Build topic filters for selected events
       const logs = await rpcCall('eth_getLogs', [{
         address: addr,
-        fromBlock: '0x' + (lastBlock + 1).toString(16),
+        fromBlock: '0x' + (globalLastBlock + 1).toString(16),
         toBlock: '0x' + current.toString(16)
       }])
 
-      lastBlock = current
+      globalLastBlock = current
 
       if (!logs || logs.length === 0) {
-        pollStatus.textContent = `Watching... block ${current.toLocaleString()} (no events)`
+        if (ps) ps.textContent = `Watching... block ${current.toLocaleString()} (no events)`
         return
       }
 
-      pollStatus.textContent = `Block ${current.toLocaleString()} - ${logs.length} log(s)`
+      if (ps) ps.textContent = `Block ${current.toLocaleString()} - ${logs.length} log(s)`
 
       for (const log of logs) {
         try {
-          const decoded = decodeEventLog({ abi, topics: log.topics, data: log.data, strict: false })
-          if (!selectedEvents.has(decoded.eventName)) continue
+          const decoded = decodeEventLog({ abi: globalAbi, topics: log.topics, data: log.data, strict: false })
+          if (!globalSelectedEvents.has(decoded.eventName)) continue
 
-          const evtAbi = abi.find(e => e.type === 'event' && e.name === decoded.eventName)
+          const evtAbi = globalAbi.find(e => e.type === 'event' && e.name === decoded.eventName)
           const inputs = evtAbi?.inputs || []
           const blockNum = parseInt(log.blockNumber, 16)
           const txHash = log.transactionHash
@@ -168,20 +194,21 @@ export function render(container) {
             return `<span class="text-dim">${esc(inp.name)}</span>=<span class="mono">${esc(display)}</span>`
           }).join(', ')
 
-          const entry = document.createElement('div')
-          entry.className = 'em-entry'
-          entry.innerHTML = `
-            <div class="em-entry-header">
-              <span class="text-purple">${esc(decoded.eventName)}</span>
-              <span class="text-dim">block ${blockNum.toLocaleString()}</span>
-              <a href="${etherscanLink(txHash)}" target="_blank" class="text-blue" style="font-size:10px">${txHash.slice(0, 10)}...</a>
-            </div>
-            <div class="em-entry-params">${params}</div>
-          `
-          feed.prepend(entry)
+          const entryHtml = `<div class="em-entry-header"><span class="text-purple">${esc(decoded.eventName)}</span><span class="text-dim">block ${blockNum.toLocaleString()}</span><a href="${etherscanLink(txHash)}" target="_blank" class="text-blue" style="font-size:10px">${txHash.slice(0, 10)}...</a></div><div class="em-entry-params">${params}</div>`
 
-          // Cap the feed at 100 entries
-          while (feed.children.length > 100) feed.lastChild.remove()
+          // Cache entry
+          globalEntries.unshift(entryHtml)
+          if (globalEntries.length > 100) globalEntries.pop()
+
+          // Append to feed if it exists (user might be on another tab)
+          const feedEl = document.getElementById('em-feed')
+          if (feedEl) {
+            const entry = document.createElement('div')
+            entry.className = 'em-entry'
+            entry.innerHTML = entryHtml
+            feedEl.prepend(entry)
+            while (feedEl.children.length > 100) feedEl.lastChild.remove()
+          }
         } catch {}
       }
     } catch (e) {

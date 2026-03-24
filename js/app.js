@@ -193,7 +193,7 @@ function init() {
       const res = await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_gasPrice', params: [], id: 1 }) })
       const data = await res.json()
       if (data.result) {
-        const gwei = (Number(BigInt(data.result)) / 1e9).toFixed(1)
+        const gwei = (Number(BigInt(data.result)) / 1e9).toFixed(2)
         document.getElementById('gas-ticker').innerHTML = `<span class="gas-ticker-label">Gas:</span> <span class="gas-ticker-value">${gwei} gwei</span>`
       }
     } catch {}
