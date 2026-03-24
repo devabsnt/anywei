@@ -1846,9 +1846,12 @@ footer {
 
   .tool-area {
     max-height: none;
-    padding: 12px 12px 40px 12px;
+    padding: 8px 10px 40px 10px;
     margin-left: 0;
   }
+  .tool-header h2 { font-size: 15px; margin-bottom: 2px; }
+  .tool-desc { font-size: 11px; margin-bottom: 8px; }
+  .tool-body { gap: 8px; }
 
   /* Stack grids vertically */
   .converter-grid { grid-template-columns: 1fr; }
