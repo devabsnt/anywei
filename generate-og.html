@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;background:#000">
+<canvas id="c" width="1200" height="630"></canvas>
+<script>
+const c = document.getElementById('c')
+const ctx = c.getContext('2d')
+
+// Background
+ctx.fillStyle = '#0a0a0a'
+ctx.fillRect(0, 0, 1200, 630)
+
+// Subtle border
+ctx.strokeStyle = '#262626'
+ctx.lineWidth = 2
+ctx.strokeRect(40, 40, 1120, 550)
+
+// Hammer icon
+ctx.font = '100px serif'
+ctx.textAlign = 'center'
+ctx.fillStyle = '#f59e0b'
+ctx.fillText('⚒', 600, 240)
+
+// anywei text
+ctx.font = 'bold 64px monospace'
+ctx.fillStyle = '#f59e0b'
+ctx.fillText('anywei', 600, 340)
+
+// Tagline
+ctx.font = '24px monospace'
+ctx.fillStyle = '#737373'
+ctx.fillText('dev tools, zero setup', 600, 400)
+
+// Description
+ctx.font = '20px sans-serif'
+ctx.fillStyle = '#555555'
+ctx.fillText('25+ Solidity tools in your browser', 600, 460)
+
+// URL
+ctx.font = '16px monospace'
+ctx.fillStyle = '#404040'
+ctx.fillText('anywei.dev', 600, 560)
+
+// Download as PNG
+setTimeout(() => {
+  const link = document.createElement('a')
+  link.download = 'og-image.png'
+  link.href = c.toDataURL('image/png')
+  link.click()
+  document.body.innerHTML = '<p style="color:white;font-family:monospace;padding:20px">PNG downloaded! Move it to public/og-image.png</p>'
+}, 100)
+</script>
+</body>
+</html>
