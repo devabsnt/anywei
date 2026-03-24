@@ -179,6 +179,9 @@ function init() {
   // Theme toggle
   const savedTheme = localStorage.getItem('anywei_theme') || 'dark'
   if (savedTheme === 'light') document.documentElement.classList.add('light-theme')
+  // Mobile search button opens command palette
+  document.getElementById('mobile-search').addEventListener('click', openPalette)
+
   const themeBtn = document.getElementById('theme-toggle')
   themeBtn.textContent = savedTheme === 'light' ? '\u2600' : '\u263D'
   themeBtn.addEventListener('click', () => {

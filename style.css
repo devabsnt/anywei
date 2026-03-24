@@ -1309,6 +1309,19 @@ footer {
 .gas-ticker-label { color: var(--text-dim); }
 .gas-ticker-value { color: var(--accent); font-family: var(--font-mono); font-weight: 600; }
 .header-right { display: flex; align-items: center; gap: 8px; }
+.mobile-search-btn {
+  display: none;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 12px;
+  cursor: pointer;
+  flex: 1;
+  text-align: left;
+  margin: 0 12px;
+}
 
 /* ── dApp Builder ─────────────────────────────────────────── */
 .db-layout {
@@ -1853,6 +1866,7 @@ footer {
     margin-left: 0;
     overflow-y: auto;
   }
+  .mobile-search-btn { display: block; }
   .tool-header h2 { font-size: 15px; margin-bottom: 2px; }
   .tool-desc { font-size: 11px; margin-bottom: 8px; }
   .tool-body { gap: 8px; }
