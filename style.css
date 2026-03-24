@@ -1844,10 +1844,14 @@ footer {
     background: var(--bg-surface);
   }
 
+  .layout { display: flex; flex-direction: column; }
   .tool-area {
     max-height: none;
+    height: auto;
+    flex: 1;
     padding: 8px 10px 40px 10px;
     margin-left: 0;
+    overflow-y: auto;
   }
   .tool-header h2 { font-size: 15px; margin-bottom: 2px; }
   .tool-desc { font-size: 11px; margin-bottom: 8px; }
