@@ -1,0 +1,7 @@
+<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#0a0a0a"/>
+  <text x="600" y="260" text-anchor="middle" font-family="monospace" font-size="120" fill="#f59e0b">&#9874;</text>
+  <text x="600" y="370" text-anchor="middle" font-family="monospace" font-size="72" font-weight="bold" fill="#f59e0b">anywei</text>
+  <text x="600" y="430" text-anchor="middle" font-family="monospace" font-size="28" fill="#737373">dev tools, zero setup</text>
+  <text x="600" y="490" text-anchor="middle" font-family="sans-serif" font-size="22" fill="#555">25+ Solidity tools in your browser</text>
+</svg>
