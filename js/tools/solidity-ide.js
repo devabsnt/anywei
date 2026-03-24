@@ -207,6 +207,7 @@ export function render(container, queryParams = {}) {
           <label class="ide-checkbox"><input type="checkbox" id="ide-analyze" checked> Security</label>
         </div>
         <div class="ide-toolbar-right">
+          <button id="ide-flatten" class="ide-find-btn" title="Flatten all imports into single file">Flatten</button>
           <button id="ide-share" class="ide-find-btn" title="Copy shareable link">Share</button>
           <button id="ide-format" class="ide-find-btn" title="Format code">Format</button>
           <button id="ide-compile" class="btn btn-primary" disabled>Compile (Ctrl+Enter)</button>
@@ -1106,6 +1107,116 @@ contract MyContract {
       return result
     }).join('\n')
     setSource(formatted)
+  })
+
+  // Contract flattener — resolve all imports and concatenate into single file
+  document.getElementById('ide-flatten').addEventListener('click', async () => {
+    const btn = document.getElementById('ide-flatten')
+    const source = getSource()
+    btn.textContent = 'Flattening...'
+    btn.disabled = true
+
+    try {
+      // Use the same import resolution the compiler uses, but just concatenate sources
+      const importRegex = /import\s+(?:\{[^}]*\}\s+from\s+)?["']([^"']+)["']/g
+      const resolved = new Map()
+      resolved.set(activeFileName, source)
+
+      async function resolveFile(content, parentKey) {
+        let match
+        const regex = new RegExp(importRegex.source, 'g')
+        while ((match = regex.exec(content)) !== null) {
+          const imp = match[1]
+          if (resolved.has(imp)) continue
+
+          let url = null
+          const npmMappings = { '@openzeppelin/contracts': 'https://cdn.jsdelivr.net/npm/@openzeppelin/contracts@5.3.0', '@openzeppelin/contracts-upgradeable': 'https://cdn.jsdelivr.net/npm/@openzeppelin/contracts-upgradeable@5.3.0' }
+
+          // Resolve to URL
+          if (imp.startsWith('http')) url = imp
+          else {
+            for (const [prefix, base] of Object.entries(npmMappings)) {
+              if (imp.startsWith(prefix)) { url = base + imp.slice(prefix.length); break }
+            }
+          }
+          if (!url && (imp.startsWith('./') || imp.startsWith('../')) && parentKey) {
+            const parentUrl = Object.entries(npmMappings).reduce((u, [p, b]) => parentKey.startsWith(p) ? b + parentKey.slice(p.length) : u, parentKey)
+            if (parentUrl.startsWith('http')) {
+              const base = parentUrl.substring(0, parentUrl.lastIndexOf('/') + 1)
+              const parts = (base + imp).split('/')
+              const norm = []
+              for (const p of parts) { if (p === '..') norm.pop(); else if (p !== '.') norm.push(p) }
+              url = norm.join('/')
+            }
+          }
+
+          if (!url) continue
+          try {
+            const res = await fetch(url)
+            if (!res.ok) continue
+            const text = await res.text()
+            // Store under the import path
+            resolved.set(imp, text)
+            // Recursively resolve nested imports
+            await resolveFile(text, imp)
+          } catch {}
+        }
+      }
+
+      appendTerminal('output', '<div class="term-line term-info">Resolving imports for flattening...</div>')
+      await resolveFile(source, activeFileName)
+
+      // Build flattened output
+      const seen = new Set()
+      let flat = ''
+      let mainPragma = ''
+      let mainLicense = ''
+
+      // Extract pragma and license from main file
+      for (const line of source.split('\n')) {
+        if (line.trim().startsWith('pragma ')) mainPragma = line.trim()
+        if (line.trim().startsWith('// SPDX-License-Identifier:')) mainLicense = line.trim()
+      }
+
+      if (mainLicense) flat += mainLicense + '\n'
+      if (mainPragma) flat += mainPragma + '\n\n'
+
+      // Add all resolved dependencies first (skip pragma/license/import lines)
+      for (const [key, content] of resolved) {
+        if (key === activeFileName) continue
+        flat += `// ---- ${key} ----\n`
+        for (const line of content.split('\n')) {
+          const t = line.trim()
+          if (t.startsWith('pragma ')) continue
+          if (t.startsWith('// SPDX-License-Identifier:')) continue
+          if (t.match(/^import\s/)) continue
+          flat += line + '\n'
+        }
+        flat += '\n'
+      }
+
+      // Add main file (skip pragma/license/import lines)
+      flat += `// ---- ${activeFileName} ----\n`
+      for (const line of source.split('\n')) {
+        const t = line.trim()
+        if (t.startsWith('pragma ')) continue
+        if (t.startsWith('// SPDX-License-Identifier:')) continue
+        if (t.match(/^import\s/)) continue
+        flat += line + '\n'
+      }
+
+      // Create a new file with the flattened source
+      const flatName = activeFileName.replace('.sol', '.flat.sol')
+      files[flatName] = { content: flat, modified: Date.now() }
+      saveFiles(files)
+      switchFile(flatName)
+      appendTerminal('output', `<div class="term-line term-success">Flattened ${resolved.size} files into ${flatName}</div>`)
+    } catch (e) {
+      appendTerminal('output', `<div class="term-line term-error">Flatten failed: ${esc(e.message)}</div>`)
+    }
+
+    btn.textContent = 'Flatten'
+    btn.disabled = false
   })
 
   loadVersions()

@@ -29,6 +29,9 @@ const TOOLS = [
   { id: 'eip712-signer', path: '/eip712', label: 'EIP-712', icon: '\u2712', keywords: 'eip712 sign verify typed data signature permit', seo: 'Sign and verify EIP-712 typed data for permit and gasless transactions' },
   { id: 'multicall-builder', path: '/multicall', label: 'Multicall', icon: '\u2261', keywords: 'multicall batch aggregate calls multicall3', seo: 'Build batched Multicall3 calls for efficient contract reads' },
   { id: 'chain-reference', path: '/chains', label: 'Chains', icon: '\u26D3', keywords: 'chain id network rpc explorer reference', seo: 'EVM chain reference with chain IDs, RPC URLs, and block explorers' },
+  { id: 'event-monitor', path: '/events-live', label: 'Event Monitor', icon: '\u2301', keywords: 'event monitor watch live stream contract logs', seo: 'Monitor smart contract events in real-time' },
+  { id: 'safe-tx-builder', path: '/safe', label: 'Safe TX Builder', icon: '\u2610', keywords: 'safe gnosis multisig transaction builder batch', seo: 'Build Gnosis Safe transaction batches with encoded calldata' },
+  { id: 'vanity-address', path: '/vanity', label: 'Vanity Address', icon: '\u2662', keywords: 'vanity address generate mine custom pattern', seo: 'Generate custom Ethereum vanity addresses in your browser' },
 ]
 
 let activeTool = null

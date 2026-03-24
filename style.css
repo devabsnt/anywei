@@ -1699,6 +1699,48 @@ footer {
   gap: 8px;
 }
 
+/* ── Vanity Address Miner ─────────────────────────────────── */
+.va-match {
+  animation: em-fade-in 0.3s;
+}
+.va-highlight {
+  color: var(--accent);
+  font-weight: 700;
+  background: var(--accent-dim);
+  padding: 0 1px;
+}
+
+/* ── Event Monitor ────────────────────────────────────────── */
+.em-event-check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  font-size: 12px;
+  cursor: pointer;
+}
+.em-entry {
+  padding: 6px 0;
+  border-bottom: 1px solid #1a1a1a;
+  font-size: 12px;
+  animation: em-fade-in 0.3s;
+}
+.em-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.em-entry-params {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding-left: 4px;
+}
+@keyframes em-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Scrollbar ────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
