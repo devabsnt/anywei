@@ -100,6 +100,17 @@ function detectReentrancy(source, ast, findings) {
       )
       if (hasGuard) return
 
+      // Collect local variable names (params, returns, and any declared locals)
+      // so we can distinguish state writes from local-variable writes.
+      const locals = new Set()
+      for (const p of (node.parameters || [])) { if (p?.name) locals.add(p.name) }
+      for (const r of (node.returnParameters || [])) { if (r?.name) locals.add(r.name) }
+      visit(node.body, {
+        VariableDeclarationStatement(n) {
+          for (const v of (n.variables || [])) { if (v?.name) locals.add(v.name) }
+        }
+      })
+
       let foundExternalCall = false
       let externalCallLine = 0
 
@@ -111,7 +122,7 @@ function detectReentrancy(source, ast, findings) {
         }
 
         // Check for state writes AFTER external call
-        if (foundExternalCall && hasStateWrite(stmt)) {
+        if (foundExternalCall && hasStateWrite(stmt, locals)) {
           findings.push({
             severity: CRITICAL,
             line: externalCallLine,
@@ -437,24 +448,32 @@ export function analyzeGasOptimizations(source) {
 
 // ── Helpers ──────────────────────────────────────────────────
 
+// Built-in member methods that don't make external calls
+const NON_EXTERNAL_METHODS = new Set(['push', 'pop', 'length', 'concat'])
+
 function hasExternalCall(node) {
   let found = false
   try {
     visit(node, {
       FunctionCall(n) {
-        const expr = n.expression
+        // Unwrap .call{value: x}() — parser wraps these in NameValueExpression
+        let expr = n.expression
+        if (expr?.type === 'NameValueExpression') expr = expr.expression
+        if (!expr) return
+
         // .call, .delegatecall, .staticcall, .transfer, .send
-        if (expr?.memberName === 'call' || expr?.memberName === 'delegatecall' ||
-            expr?.memberName === 'staticcall' || expr?.memberName === 'transfer' ||
-            expr?.memberName === 'send') {
+        if (expr.memberName === 'call' || expr.memberName === 'delegatecall' ||
+            expr.memberName === 'staticcall' || expr.memberName === 'transfer' ||
+            expr.memberName === 'send') {
           found = true
+          return
         }
         // Direct contract calls: someContract.someFunction()
-        if (expr?.type === 'MemberAccess' && expr.expression?.type === 'Identifier') {
-          // Heuristic: if calling a method on a variable (not 'this', 'super', 'msg', 'block', 'tx', 'abi')
+        if (expr.type === 'MemberAccess' && expr.expression?.type === 'Identifier') {
+          // Heuristic: if calling a method on a variable (not a built-in namespace)
           const obj = expr.expression.name
           const builtins = ['this', 'super', 'msg', 'block', 'tx', 'abi', 'type', 'address']
-          if (!builtins.includes(obj)) {
+          if (!builtins.includes(obj) && !NON_EXTERNAL_METHODS.has(expr.memberName)) {
             found = true
           }
         }
@@ -464,16 +483,46 @@ function hasExternalCall(node) {
   return found
 }
 
-function hasStateWrite(node) {
+const ASSIGN_OPS = new Set(['=', '+=', '-=', '*=', '/=', '%=', '<<=', '>>=', '&=', '|=', '^='])
+
+// Walks a target expression (LHS of an assignment or subject of ++/--) down to
+// its base identifier. E.g. balances[msg.sender].x → Identifier "balances".
+function baseIdentifierName(target) {
+  let base = target
+  while (base) {
+    if (base.type === 'Identifier') return base.name
+    if (base.type === 'IndexAccess') { base = base.base; continue }
+    if (base.type === 'MemberAccess') { base = base.expression; continue }
+    return null
+  }
+  return null
+}
+
+function hasStateWrite(node, locals) {
   let found = false
   try {
     visit(node, {
       ExpressionStatement(n) {
-        if (n.expression?.type === 'BinaryOperation' && n.expression.operator === '=') {
+        const expr = n.expression
+        if (!expr) return
+
+        let target = null
+        // Assignment or compound assignment: x = ..., x += ..., x -= ..., etc.
+        if (expr.type === 'BinaryOperation' && ASSIGN_OPS.has(expr.operator)) {
+          target = expr.left
+        }
+        // Increment/decrement: x++, x--, ++x, --x
+        else if (expr.type === 'UnaryOperation' && (expr.operator === '++' || expr.operator === '--')) {
+          target = expr.subExpression
+        }
+        if (!target) return
+
+        const name = baseIdentifierName(target)
+        // Only flag writes to non-local (i.e. state) variables.
+        if (name && !(locals && locals.has(name))) {
           found = true
         }
-      },
-      StateVariableDeclarationStatement() { found = true }
+      }
     })
   } catch {}
   return found
