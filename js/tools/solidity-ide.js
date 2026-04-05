@@ -1304,7 +1304,17 @@ contract MyContract {
       sources: { [activeFileName]: { content: source } },
       settings: {
         optimizer: { enabled: optimizeCheck.checked, runs: 200 },
-        outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object', 'evm.deployedBytecode.object'] } }
+        outputSelection: {
+          '*': {
+            '*': [
+              'abi',
+              'evm.bytecode.object', 'evm.bytecode.sourceMap',
+              'evm.deployedBytecode.object', 'evm.deployedBytecode.sourceMap',
+              'storageLayout',
+            ],
+            '': ['id'],  // source-file ids are needed to resolve source maps
+          },
+        }
       }
     }
 
@@ -1388,6 +1398,12 @@ contract MyContract {
     const artifacts = {}
     let artHtml = ''
 
+    // Build a source-id → filename map for source-map resolution
+    const sourceIdMap = {}
+    for (const [fileName, fileEntry] of Object.entries(result.sources || {})) {
+      if (typeof fileEntry?.id === 'number') sourceIdMap[fileEntry.id] = fileName
+    }
+
     for (const [fileName, fileContracts] of Object.entries(allContracts)) {
       for (const [name, contract] of Object.entries(fileContracts)) {
         const abi = contract.abi || []
@@ -1396,7 +1412,17 @@ contract MyContract {
         if (!bytecode && !abi.length) continue
         // Skip interfaces and abstract contracts (no bytecode = can't deploy)
         if (!bytecode || bytecode.length < 4) continue
-        artifacts[name] = { contractName: name, abi, bytecode: '0x' + bytecode, deployedBytecode: '0x' + deployedBytecode }
+        artifacts[name] = {
+          contractName: name,
+          sourceFile: fileName,
+          abi,
+          bytecode: '0x' + bytecode,
+          deployedBytecode: '0x' + deployedBytecode,
+          sourceMap: contract.evm?.bytecode?.sourceMap || '',
+          deployedSourceMap: contract.evm?.deployedBytecode?.sourceMap || '',
+          storageLayout: contract.storageLayout || null,
+          sourceIdMap,
+        }
 
         // Contract size monitor
         const deployedSize = deployedBytecode ? deployedBytecode.length / 2 : 0

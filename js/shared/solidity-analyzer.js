@@ -21,6 +21,12 @@ const INFO = 'info'
  * @param {string[]} [options.excludeTitles] - finding titles to suppress.
  * @returns {Array<{severity,line,title,message}>}
  */
+// Cache the last (source, options) → findings. Live linter re-runs on every
+// edit after a debounce — skipping the parse for unchanged input is cheap.
+let _cacheSrc = null
+let _cacheOptsKey = null
+let _cacheFindings = null
+
 export function analyzeSource(source, options = {}) {
   const {
     solcWarnings = [],
@@ -29,12 +35,22 @@ export function analyzeSource(source, options = {}) {
     excludeTitles = null,
   } = options
 
+  // Cache: identical source + identical options → return last result
+  const optsKey = JSON.stringify([solcWarnings.length, magicNumbers, severityOverrides, excludeTitles])
+  if (source === _cacheSrc && optsKey === _cacheOptsKey && _cacheFindings) {
+    return _cacheFindings
+  }
+
   // Parse AST
   let ast
   try {
     ast = parse(source, { loc: true, range: true, tolerant: true })
   } catch (e) {
-    return [{ severity: INFO, line: 0, title: 'Parse error', message: `Could not parse source for analysis: ${e.message}` }]
+    const out = [{ severity: INFO, line: 0, title: 'Parse error', message: `Could not parse source for analysis: ${e.message}` }]
+    _cacheSrc = source
+    _cacheOptsKey = optsKey
+    _cacheFindings = out
+    return out
   }
 
   const ctx = buildContext(ast, source)
@@ -94,6 +110,9 @@ export function analyzeSource(source, options = {}) {
   const order = { critical: 0, high: 1, medium: 2, info: 3 }
   out.sort((a, b) => (order[a.severity] - order[b.severity]) || (a.line - b.line))
 
+  _cacheSrc = source
+  _cacheOptsKey = optsKey
+  _cacheFindings = out
   return out
 }
 

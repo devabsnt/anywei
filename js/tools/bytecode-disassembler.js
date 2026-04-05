@@ -1,6 +1,7 @@
 import { fetchBytecode } from '../shared/etherscan.js'
 import { lookupSelector } from '../shared/etherscan.js'
 import { esc, ensure0x, strip0x } from '../shared/formatters.js'
+import { parseSourceMap, buildLineIndex, rangeToLines } from '../shared/source-map.js'
 
 // EVM opcode table
 const OPCODES = {
@@ -70,9 +71,24 @@ export function render(container) {
   container.innerHTML = `
     <div class="tool-header">
       <h2>Bytecode Disassembler</h2>
-      <p class="tool-desc">Paste bytecode or a contract address to see the opcode breakdown.</p>
+      <p class="tool-desc">Paste bytecode or a contract address to see the opcode breakdown. Load a compiled artifact to link opcodes to source.</p>
     </div>
     <div class="tool-body">
+      <div class="input-row">
+        <div class="input-group flex-1">
+          <label>Load artifact <span class="text-dim">(for source-map linking)</span></label>
+          <select id="bc-artifact" class="mono-input">
+            <option value="">— paste bytecode below instead —</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Which code?</label>
+          <select id="bc-which" class="mono-input">
+            <option value="deployed">Deployed (runtime)</option>
+            <option value="creation">Creation</option>
+          </select>
+        </div>
+      </div>
       <div class="input-group">
         <label>Bytecode (hex) or contract address</label>
         <textarea id="bc-input" class="mono-input" rows="3" placeholder="0x608060405234801561001057... or 0x contract address" spellcheck="false"></textarea>
@@ -83,9 +99,60 @@ export function render(container) {
 
   const input = document.getElementById('bc-input')
   const output = document.getElementById('bc-output')
+  const artifactSelect = document.getElementById('bc-artifact')
+  const whichSelect = document.getElementById('bc-which')
 
-  input.addEventListener('input', run)
-  input.addEventListener('paste', () => setTimeout(run, 50))
+  // Source-map state for enriched rendering
+  let smState = null // { entries: [...], source: str, lineIndex: [...], fileName: str }
+
+  // Populate artifact dropdown
+  let artifacts = {}
+  try { artifacts = JSON.parse(localStorage.getItem('anywei_compiled') || '{}') } catch {}
+  let ideFiles = {}
+  try { ideFiles = JSON.parse(localStorage.getItem('anywei_ide_files') || '{}') } catch {}
+  for (const name of Object.keys(artifacts)) {
+    const a = artifacts[name]
+    if (!a?.sourceMap && !a?.deployedSourceMap) continue
+    const opt = document.createElement('option')
+    opt.value = name
+    opt.textContent = name
+    artifactSelect.appendChild(opt)
+  }
+
+  artifactSelect.addEventListener('change', () => {
+    const name = artifactSelect.value
+    if (!name) { smState = null; input.value = ''; output.innerHTML = ''; return }
+    loadArtifact(name)
+  })
+  whichSelect.addEventListener('change', () => {
+    if (artifactSelect.value) loadArtifact(artifactSelect.value)
+  })
+
+  function loadArtifact(name) {
+    const a = artifacts[name]
+    if (!a) return
+    const which = whichSelect.value
+    const bc = which === 'creation' ? a.bytecode : a.deployedBytecode
+    const sm = which === 'creation' ? a.sourceMap : a.deployedSourceMap
+    const sourceName = a.sourceFile || Object.keys(ideFiles)[0]
+    const source = ideFiles[sourceName]?.content || ''
+    if (!bc || bc === '0x') { output.innerHTML = '<div class="result-card error">This artifact has no bytecode for that selection.</div>'; return }
+    input.value = bc
+    if (sm && source) {
+      smState = {
+        entries: parseSourceMap(sm),
+        source,
+        lineIndex: buildLineIndex(source),
+        fileName: sourceName,
+      }
+    } else {
+      smState = null
+    }
+    run()
+  }
+
+  input.addEventListener('input', () => { if (!artifactSelect.value) smState = null; run() })
+  input.addEventListener('paste', () => setTimeout(() => { if (!artifactSelect.value) smState = null; run() }, 50))
 
   async function run() {
     const raw = input.value.trim()
@@ -142,13 +209,62 @@ export function render(container) {
 
     html += '</div>'
 
-    // Opcode listing
-    html += '<div class="bc-listing">'
-    for (const op of ops) {
-      html += `<div class="bc-op bc-${op.category}"><span class="bc-offset">${op.offset.toString(16).padStart(4, '0')}</span><span class="bc-name">${op.name}</span>${op.operand ? `<span class="bc-operand">0x${op.operand}</span>` : ''}</div>`
+    // Opcode listing — with source-map linking when available
+    if (smState) {
+      html += `<div class="bc-split">`
+      html += `<div class="bc-listing bc-listing-split" id="bc-listing-el">`
+      for (let i = 0; i < ops.length; i++) {
+        const op = ops[i]
+        const sm = smState.entries[i]
+        let lineInfo = ''
+        let click = ''
+        if (sm && sm.s >= 0 && sm.l > 0) {
+          const r = rangeToLines(smState.lineIndex, sm.s, sm.l)
+          if (r) {
+            lineInfo = `<span class="bc-srcline">L${r.startLine}${r.endLine !== r.startLine ? '-' + r.endLine : ''}</span>`
+            click = `data-start="${sm.s}" data-length="${sm.l}" data-line="${r.startLine}"`
+          }
+        }
+        html += `<div class="bc-op bc-${op.category}" ${click}><span class="bc-offset">${op.offset.toString(16).padStart(4, '0')}</span><span class="bc-name">${op.name}</span>${op.operand ? `<span class="bc-operand">0x${op.operand}</span>` : ''}${lineInfo}</div>`
+      }
+      html += '</div>'
+      // Source panel
+      html += `<div class="bc-source-panel" id="bc-source-el">`
+      html += `<div class="bc-source-header">${esc(smState.fileName || 'source')}</div>`
+      html += `<pre class="bc-source-code">`
+      const lines = smState.source.split('\n')
+      for (let i = 0; i < lines.length; i++) {
+        html += `<div class="bc-src-line" data-line="${i + 1}"><span class="bc-src-lineno">${(i + 1).toString().padStart(4, ' ')}</span>${esc(lines[i]) || ' '}</div>`
+      }
+      html += `</pre></div>`
+      html += '</div>'
+    } else {
+      html += '<div class="bc-listing">'
+      for (const op of ops) {
+        html += `<div class="bc-op bc-${op.category}"><span class="bc-offset">${op.offset.toString(16).padStart(4, '0')}</span><span class="bc-name">${op.name}</span>${op.operand ? `<span class="bc-operand">0x${op.operand}</span>` : ''}</div>`
+      }
+      html += '</div>'
     }
-    html += '</div>'
 
     output.innerHTML = html
+
+    // Wire click-to-highlight-source if we rendered the split view
+    if (smState) {
+      const listingEl = document.getElementById('bc-listing-el')
+      const sourceEl = document.getElementById('bc-source-el')
+      listingEl?.addEventListener('click', (e) => {
+        const opDiv = e.target.closest('.bc-op')
+        if (!opDiv || !opDiv.dataset.line) return
+        const line = parseInt(opDiv.dataset.line)
+        sourceEl.querySelectorAll('.bc-src-line.active').forEach(el => el.classList.remove('active'))
+        const target = sourceEl.querySelector(`.bc-src-line[data-line="${line}"]`)
+        if (target) {
+          target.classList.add('active')
+          target.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        }
+        listingEl.querySelectorAll('.bc-op.active').forEach(el => el.classList.remove('active'))
+        opDiv.classList.add('active')
+      })
+    }
   }
 }

@@ -403,6 +403,81 @@ select.mono-input { cursor: pointer; }
 .copyable { position: relative; }
 .copyable .btn-copy { position: absolute; top: 2px; right: 2px; }
 
+/* Trace access-list panel */
+.trace-accesslist { margin-top: 12px; border: 1px solid var(--border); background: var(--bg); padding: 8px 12px; }
+.trace-accesslist summary { cursor: pointer; font-size: 12px; color: var(--text); font-weight: 500; }
+.trace-accesslist summary:hover { color: var(--accent); }
+.trace-accesslist pre { max-height: 200px; overflow-y: auto; }
+
+/* Coverage viewer */
+.coverage-bar { height: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+.coverage-bar-fill { height: 100%; transition: width 0.3s; }
+.coverage-bar-fill.success { background: var(--success); }
+.coverage-bar-fill.warning { background: var(--warning); }
+.coverage-bar-fill.error { background: var(--error); }
+.coverage-source { margin-top: 8px; border: 1px solid var(--border); background: var(--bg); max-height: 500px; overflow-y: auto; }
+.coverage-source-header { padding: 6px 10px; background: var(--bg-surface); border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text-dim); position: sticky; top: 0; }
+.coverage-lines { margin: 0; padding: 6px 0; font-family: 'Consolas', 'Courier New', monospace; font-size: 11px; line-height: 1.55; }
+.cov-line { padding: 0 10px; white-space: pre; }
+.cov-mark { display: inline-block; width: 14px; text-align: center; font-weight: bold; }
+.cov-lineno { display: inline-block; width: 40px; color: var(--text-dim); text-align: right; padding-right: 10px; user-select: none; }
+.cov-hit { background: rgba(40, 160, 90, 0.08); }
+.cov-hit .cov-mark { color: var(--success); }
+.cov-miss { background: rgba(210, 60, 60, 0.08); }
+.cov-miss .cov-mark { color: var(--error); }
+.cov-neutral { opacity: 0.6; }
+
+/* Generic code output block (shared by ABI→TS, etc.) */
+.ts-output {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 12px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--text);
+  margin: 0;
+}
+.check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  margin-right: 16px;
+}
+.check-label input[type="checkbox"] { margin: 0; cursor: pointer; }
+
+/* Storage layout table */
+.storage-layout-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.storage-layout-table th {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: 10px;
+  text-transform: uppercase;
+  background: var(--bg-surface);
+}
+.storage-layout-table td {
+  padding: 5px 10px;
+  border-bottom: 1px solid #1a1a1a;
+  vertical-align: middle;
+}
+.storage-layout-table td.mono-cell {
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+.storage-layout-table tr.packed { background: rgba(90, 140, 220, 0.07); }
+
 .raw-words-header {
   font-size: 10px;
   color: var(--text-dim);
@@ -519,6 +594,52 @@ select.mono-input { cursor: pointer; }
 .bc-call .bc-name { color: var(--warning); font-weight: 600; }
 .bc-control .bc-name { color: var(--purple); }
 .bc-stack .bc-name { color: var(--text-dim); }
+.bc-srcline { margin-left: auto; color: var(--text-dim); font-size: 10px; opacity: 0.6; }
+.bc-op[data-line] { cursor: pointer; }
+.bc-op[data-line]:hover { background: rgba(255,255,255,0.04); }
+.bc-op.active { background: rgba(90, 140, 220, 0.15); border-left: 2px solid var(--accent); padding-left: 2px; }
+
+/* Disassembler split-pane */
+.bc-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-height: 600px;
+}
+.bc-listing-split { max-height: 600px; }
+.bc-source-panel {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  overflow-y: auto;
+  max-height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+.bc-source-header {
+  padding: 6px 10px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.bc-source-code {
+  margin: 0;
+  padding: 8px 0;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  overflow-x: auto;
+}
+.bc-src-line { padding: 0 10px; white-space: pre; }
+.bc-src-lineno { display: inline-block; width: 40px; color: var(--text-dim); text-align: right; padding-right: 10px; user-select: none; }
+.bc-src-line.active { background: rgba(90, 140, 220, 0.2); }
+
+@media (max-width: 900px) {
+  .bc-split { grid-template-columns: 1fr; }
+}
 
 /* ── Contract Diff ────────────────────────────────────────── */
 .diff-inputs {
@@ -1797,6 +1918,15 @@ footer {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* Mempool watcher — mirrors em-entry */
+.mp-entry {
+  padding: 6px 0;
+  border-bottom: 1px solid #1a1a1a;
+  font-size: 12px;
+  animation: em-fade-in 0.3s;
+}
+.mp-entry-header { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.mp-entry-params { font-size: 11px; color: var(--text-dim); padding-left: 4px; }
 
 /* ── Scrollbar ────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

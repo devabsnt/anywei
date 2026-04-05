@@ -1,6 +1,7 @@
 import { createLocalEVM } from '../shared/local-evm.js'
 import { encodeFunctionData, decodeFunctionResult } from 'viem'
 import { esc } from '../shared/formatters.js'
+import { parseSourceMap, buildLineIndex, rangeToLines } from '../shared/source-map.js'
 
 const DEPLOY_ADDR = '0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF'
 const CALLER = '0x5e7e5e7e5e7e5e7e5e7e5e7e5e7e5e7e5e7e5e7e'
@@ -171,6 +172,7 @@ export function render(container, queryParams = {}) {
             </select>
           </div>
           <button id="qt-run" class="btn btn-primary">Run</button>
+          <button id="qt-coverage" class="btn">Coverage</button>
           <button id="qt-stop" class="btn hidden">Stop</button>
         </div>
       </div>
@@ -213,6 +215,7 @@ export function render(container, queryParams = {}) {
   artifactInput.addEventListener('change', parseInput)
   artifactInput.addEventListener('paste', () => setTimeout(parseInput, 50))
   runBtn.addEventListener('click', run)
+  document.getElementById('qt-coverage').addEventListener('click', runCoverage)
   stopBtn.addEventListener('click', () => { running = false })
 
   function parseInput() {
@@ -326,6 +329,11 @@ export function render(container, queryParams = {}) {
     // Full stack detail panel (shown on click)
     const detailHtml = '<div id="trace-detail" class="trace-detail"><div class="text-dim">Click a step to inspect full stack</div></div>'
 
+    // Access list — collect SSTORE/SLOAD slots touched during the call
+    const accessList = buildAccessList(steps, DEPLOY_ADDR)
+    const alJson = JSON.stringify(accessList, null, 2)
+    const alHtml = `<details class="trace-accesslist"><summary>EIP-2930 Access List <span class="text-dim">(${accessList[0]?.storageKeys.length || 0} slot${accessList[0]?.storageKeys.length === 1 ? '' : 's'})</span></summary><pre class="ts-output" style="margin-top:6px">${esc(alJson)}</pre><button class="btn btn-copy trace-al-copy" style="margin-top:6px">Copy JSON</button></details>`
+
     output.innerHTML = `
       <div class="result-card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -337,8 +345,14 @@ export function render(container, queryParams = {}) {
           <div style="flex:1;min-width:0">${traceHtml}</div>
           <div style="width:280px;flex-shrink:0">${detailHtml}</div>
         </div>
+        ${alHtml}
       </div>
     `
+    output.querySelector('.trace-al-copy')?.addEventListener('click', (e) => {
+      navigator.clipboard.writeText(alJson)
+      e.target.textContent = 'Copied!'
+      setTimeout(() => { e.target.textContent = 'Copy JSON' }, 1200)
+    })
 
     // Back button
     output.querySelector('.trace-back').addEventListener('click', () => run())
@@ -537,5 +551,156 @@ export function render(container, queryParams = {}) {
     html += '</div>'
     progress.innerHTML = `<span class="${failCount > 0 ? 'warning' : 'success'}">Fuzz complete: ${passCount} pass, ${failCount} fail</span>`
     output.innerHTML = html
+  }
+
+  async function runCoverage() {
+    if (!artifact?.abi || !artifact?.deployedBytecode) return
+    const fnAbi = artifact.abi.filter(e => e.type === 'function')[parseInt(fnSelect.value)]
+    if (!fnAbi) return
+
+    if (!artifact.deployedSourceMap) {
+      output.innerHTML = '<div class="result-card error">This artifact has no source map. Recompile in the IDE to enable coverage.</div>'
+      return
+    }
+
+    // Load the source file from IDE localStorage.
+    let ideFiles = {}
+    try { ideFiles = JSON.parse(localStorage.getItem('anywei_ide_files') || '{}') } catch {}
+    const sourceName = artifact.sourceFile || Object.keys(ideFiles)[0]
+    const source = ideFiles[sourceName]?.content || ''
+    if (!source) {
+      output.innerHTML = '<div class="result-card error">Source file not found in IDE storage. Open the source in the IDE first.</div>'
+      return
+    }
+
+    running = true
+    runBtn.classList.add('hidden')
+    stopBtn.classList.remove('hidden')
+    output.innerHTML = '<div class="loading">Preparing coverage run...</div>'
+
+    // Build pc → instruction-index map by walking the deployed bytecode.
+    const pcToInstr = buildPcToInstr(artifact.deployedBytecode)
+    const sourceMap = parseSourceMap(artifact.deployedSourceMap)
+    const lineIndex = buildLineIndex(source)
+    const srcLines = source.split('\n')
+
+    // Generate test cases (from Quick Test generator) and traceCall each
+    const cases = generateTestCases(fnAbi)
+    const hitLines = new Set()
+    const executableLines = new Set()
+
+    // Pre-compute which lines have any source-map instruction (= executable)
+    for (const sm of sourceMap) {
+      if (sm.s < 0 || sm.l <= 0) continue
+      const r = rangeToLines(lineIndex, sm.s, sm.l)
+      if (!r) continue
+      for (let l = r.startLine; l <= r.endLine; l++) executableLines.add(l)
+    }
+
+    client = null
+    let c = await deploy()
+    let tested = 0
+
+    for (let i = 0; i < cases.length; i++) {
+      if (!running) break
+      progress.innerHTML = `<span class="loading">Coverage ${i + 1}/${cases.length}...</span>`
+      try {
+        const data = encodeFunctionData({ abi: artifact.abi, functionName: fnAbi.name, args: cases[i].args })
+        const result = await c.traceCall({ from: CALLER, to: DEPLOY_ADDR, data })
+        for (const step of (result.trace || [])) {
+          const idx = pcToInstr.get(step.pc)
+          if (idx == null) continue
+          const sm = sourceMap[idx]
+          if (!sm || sm.s < 0 || sm.l <= 0) continue
+          const r = rangeToLines(lineIndex, sm.s, sm.l)
+          if (!r) continue
+          for (let l = r.startLine; l <= r.endLine; l++) hitLines.add(l)
+        }
+        tested++
+      } catch {}
+      // Reset for next test
+      client = null
+      c = await deploy()
+    }
+
+    running = false
+    runBtn.classList.remove('hidden')
+    stopBtn.classList.add('hidden')
+
+    renderCoverage(hitLines, executableLines, srcLines, sourceName, fnAbi.name, tested, cases.length)
+  }
+
+  function renderCoverage(hitLines, executableLines, srcLines, sourceName, fnName, tested, total) {
+    const hit = hitLines.size
+    const executable = executableLines.size
+    const pct = executable > 0 ? (hit / executable * 100) : 0
+    const pctClass = pct >= 80 ? 'success' : pct >= 50 ? 'warning' : 'error'
+
+    let html = `<div class="result-card">
+      <div style="margin-bottom:8px"><strong>Coverage</strong> <span class="text-dim">— ${esc(fnName)}() across ${tested}/${total} test cases</span></div>
+      <div class="coverage-bar"><div class="coverage-bar-fill ${pctClass}" style="width:${pct}%"></div></div>
+      <div style="font-size:12px;margin-top:4px"><span class="${pctClass}">${pct.toFixed(1)}%</span> <span class="text-dim">${hit}/${executable} executable lines hit</span></div>
+    </div>`
+
+    html += '<div class="coverage-source"><div class="coverage-source-header">' + esc(sourceName) + '</div><pre class="coverage-lines">'
+    for (let i = 0; i < srcLines.length; i++) {
+      const lineNum = i + 1
+      const isExec = executableLines.has(lineNum)
+      const isHit = hitLines.has(lineNum)
+      const status = !isExec ? 'neutral' : isHit ? 'hit' : 'miss'
+      const indicator = !isExec ? ' ' : isHit ? '\u2713' : '\u00D7'
+      html += `<div class="cov-line cov-${status}"><span class="cov-mark">${indicator}</span><span class="cov-lineno">${lineNum.toString().padStart(4, ' ')}</span>${esc(srcLines[i]) || ' '}</div>`
+    }
+    html += '</pre></div>'
+
+    output.innerHTML = html
+  }
+
+  // Collect SLOAD/SSTORE slots per contract address from a trace.
+  // Returns an EIP-2930 access list: [{ address, storageKeys: [] }, ...]
+  function buildAccessList(steps, rootAddress) {
+    // Track (address → Set<slot>). Multi-contract calls update address via depth tracking.
+    const addrStack = [rootAddress.toLowerCase()]
+    const perAddr = new Map()
+    const touched = a => {
+      const k = a.toLowerCase()
+      if (!perAddr.has(k)) perAddr.set(k, new Set())
+      return perAddr.get(k)
+    }
+
+    for (const s of steps) {
+      const cur = addrStack[addrStack.length - 1]
+      if (s.opcode === 'SLOAD' || s.opcode === 'SSTORE') {
+        const slot = s.stack[s.stack.length - 1]
+        if (slot) {
+          // Normalize to 32-byte hex
+          const padded = '0x' + slot.replace(/^0x/, '').padStart(64, '0').toLowerCase()
+          touched(cur).add(padded)
+        }
+      }
+      // Note: depth tracking for nested contract calls is approximate in the
+      // current trace format. This works correctly for single-contract txs.
+    }
+
+    const list = []
+    for (const [addr, keys] of perAddr) {
+      if (keys.size === 0) continue
+      list.push({ address: addr, storageKeys: [...keys].sort() })
+    }
+    return list
+  }
+
+  function buildPcToInstr(bytecodeHex) {
+    const hex = bytecodeHex.startsWith('0x') ? bytecodeHex.slice(2) : bytecodeHex
+    const map = new Map()
+    let pc = 0, idx = 0
+    while (pc * 2 < hex.length) {
+      map.set(pc, idx)
+      const op = parseInt(hex.slice(pc * 2, pc * 2 + 2), 16)
+      pc += 1
+      if (op >= 0x60 && op <= 0x7f) pc += op - 0x5f  // PUSH1..PUSH32
+      idx++
+    }
+    return map
   }
 }

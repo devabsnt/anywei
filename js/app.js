@@ -7,6 +7,7 @@ const TOOLS = [
   { id: 'solidity-ide', path: '/ide', label: 'Solidity IDE', icon: '\u270E', keywords: 'solidity ide compile editor write code', seo: 'Online Solidity IDE with compiler, security analysis, and deployment' },
   { id: 'dapp-builder', path: '/builder', label: 'dApp Builder', icon: '\u25A8', keywords: 'dapp builder frontend wysiwyg drag drop ui', seo: 'Drag-and-drop dApp frontend builder for smart contracts' },
   { id: 'quick-test', path: '/test', label: 'Quick Test', icon: '\u2713', keywords: 'test fuzz quick boundary smoke deploy bytecode', seo: 'Fuzz test Solidity contracts in-browser with opcode trace viewer' },
+  { id: 'invariants', path: '/invariants', label: 'Invariants', icon: '\u222B', keywords: 'invariant property testing fuzz sequence stateful', seo: 'Property-based invariant testing for Solidity contracts' },
   { id: 'gas-estimator', path: '/gas', label: 'Gas', icon: '\u0394', keywords: 'gas estimate cost price', seo: 'Ethereum gas cost estimator for smart contract functions' },
   // ── Decode ──
   { id: 'calldata-decoder', path: '/calldata', label: 'Decode Calldata', icon: '\u2933', keywords: 'decode calldata transaction input data', seo: 'Decode Ethereum transaction calldata into readable function calls' },
@@ -16,9 +17,11 @@ const TOOLS = [
   // ── Inspect ──
   { id: 'explorer', path: '/explorer', label: 'Explorer', icon: '\u2315', keywords: 'explorer address transaction balance history account', seo: 'Explore Ethereum addresses and transactions with decoded calldata and events' },
   { id: 'abi-explorer', path: '/abi', label: 'ABI Explorer', icon: '\u2630', keywords: 'abi explorer contract functions events', seo: 'Explore smart contract ABIs with function selectors and proxy detection' },
+  { id: 'abi-to-ts', path: '/ts', label: 'ABI → TypeScript', icon: '\u2370', keywords: 'abi typescript types generate ts interface', seo: 'Generate TypeScript types from a Solidity contract ABI' },
   { id: 'bytecode-disassembler', path: '/bytecode', label: 'Bytecode', icon: '\u2328', keywords: 'bytecode disassemble opcode evm', seo: 'Disassemble EVM bytecode into readable opcodes' },
   { id: 'contract-diff', path: '/diff', label: 'Diff', icon: '\u2260', keywords: 'diff compare contract abi bytecode', seo: 'Compare smart contract ABIs and bytecodes side by side' },
   { id: 'storage-slot', path: '/storage', label: 'Storage Slots', icon: '\u25A6', keywords: 'storage slot mapping keccak256 calculate', seo: 'Calculate Solidity storage slot positions for mappings and arrays' },
+  { id: 'storage-layout', path: '/layout', label: 'Storage Layout', icon: '\u25A4', keywords: 'storage layout slots packing variables struct', seo: 'Visualize Solidity contract storage layout with slot packing' },
   { id: 'selector-lookup', path: '/selectors', label: 'Selectors', icon: '\u2318', keywords: 'selector signature lookup 4byte function event', seo: 'Look up Solidity function and event selectors from 4byte signatures' },
   { id: 'interface-checker', path: '/interface', label: 'Interface Check', icon: '\u2611', keywords: 'interface check implement erc20 erc721 erc1155', seo: 'Check if a smart contract implements ERC20, ERC721, or ERC1155 correctly' },
   { id: 'proxy-inspector', path: '/proxy', label: 'Proxy Inspector', icon: '\u229B', keywords: 'proxy inspect eip1967 uups transparent beacon implementation', seo: 'Detect proxy patterns and find implementation addresses for upgradeable contracts' },
@@ -30,6 +33,7 @@ const TOOLS = [
   { id: 'multicall-builder', path: '/multicall', label: 'Multicall', icon: '\u2261', keywords: 'multicall batch aggregate calls multicall3', seo: 'Build batched Multicall3 calls for efficient contract reads' },
   { id: 'chain-reference', path: '/chains', label: 'Chains', icon: '\u26D3', keywords: 'chain id network rpc explorer reference', seo: 'EVM chain reference with chain IDs, RPC URLs, and block explorers' },
   { id: 'event-monitor', path: '/events-live', label: 'Event Monitor', icon: '\u2301', keywords: 'event monitor watch live stream contract logs', seo: 'Monitor smart contract events in real-time' },
+  { id: 'mempool-watcher', path: '/mempool', label: 'Mempool', icon: '\u223F', keywords: 'mempool pending transactions watch stream mev frontrun', seo: 'Watch pending Ethereum transactions in the mempool with address filtering' },
   { id: 'safe-tx-builder', path: '/safe', label: 'Safe TX Builder', icon: '\u2610', keywords: 'safe gnosis multisig transaction builder batch', seo: 'Build Gnosis Safe transaction batches with encoded calldata' },
   { id: 'vanity-address', path: '/vanity', label: 'Vanity Address', icon: '\u2662', keywords: 'vanity address generate mine custom pattern', seo: 'Generate custom Ethereum vanity addresses in your browser' },
 ]
